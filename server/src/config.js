@@ -46,6 +46,13 @@ export const config = {
     serverRoot,
     process.env.PRIVATE_STORAGE_DIR || path.join(repoRoot, "dont add", "private-storage")
   ),
+  r2: {
+    bucket: process.env.R2_BUCKET || "",
+    endpoint: process.env.R2_ENDPOINT || "",
+    accessKeyId: process.env.R2_ACCESS_KEY_ID || "",
+    secretAccessKey: process.env.R2_SECRET_ACCESS_KEY || "",
+    signedUrlTtlSeconds: Number(process.env.R2_SIGNED_URL_TTL_SECONDS) || 600
+  },
   maxUploadMb: Number(process.env.MAX_UPLOAD_MB) || 250
 };
 

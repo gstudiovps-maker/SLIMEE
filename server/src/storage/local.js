@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import { assertValidStorageKey } from "./keys.js";
 
 export class LocalStorageProvider {
   constructor(rootDir) {
@@ -8,10 +9,7 @@ export class LocalStorageProvider {
   }
 
   resolveKey(storageKey) {
-    const normalized = String(storageKey).replace(/\\/g, "/").replace(/^\/+/, "");
-    if (normalized.includes("..")) {
-      throw new Error("Invalid storage key");
-    }
+    const normalized = assertValidStorageKey(storageKey);
     return path.join(this.rootDir, normalized);
   }
 
