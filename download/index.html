@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Download | Slimee Store</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../assets/css/styles.css">
+</head>
+<body class="page-download">
+  <div class="site-shell">
+    <header class="site-header">
+      <nav class="navbar" aria-label="Main navigation">
+        <a class="brand" href="../home/" aria-label="Slimee Store home">
+          <img class="brand-logo" src="../assets/img/logo.png" width="44" height="44" alt="" decoding="async" />
+          <span>
+            <strong>Slimee Store</strong>
+            <small>FiveM Packages</small>
+          </span>
+        </a>
+      </nav>
+    </header>
+
+    <main class="download-main">
+      <section class="download-panel glass-card">
+        <p class="eyebrow">Secure download</p>
+        <h1>Download your package</h1>
+        <p class="download-lead">Enter the license key from your purchase email or success page.</p>
+
+        <form id="download-form" class="download-form">
+          <label class="download-field">
+            <span>License key</span>
+            <input type="text" name="licenseKey" id="license-key-input" autocomplete="off" placeholder="SLIMEE-XXXX-XXXX-XXXX" required />
+          </label>
+          <label class="download-field">
+            <span>Package ID</span>
+            <input type="text" name="packageId" id="package-id-input" autocomplete="off" placeholder="advanced-job-system" required />
+          </label>
+          <button type="submit" class="button button-primary">Get download link</button>
+        </form>
+
+        <p id="download-status" class="download-status" role="status" aria-live="polite"></p>
+        <p id="download-hint" class="download-hint" hidden>
+          <a id="download-file-link" class="button button-primary" href="#" download>Download ZIP</a>
+        </p>
+      </section>
+    </main>
+  </div>
+
+  <script>window.STORE_REPO_PREFIX = "..";</script>
+  <script src="../assets/js/paths.js"></script>
+  <script src="../assets/js/config.js"></script>
+  <script src="../assets/js/catalog.js"></script>
+  <script>
+    (async function () {
+      const params = new URLSearchParams(window.location.search);
+      const licenseInput = document.getElementById("license-key-input");
+      const packageInput = document.getElementById("package-id-input");
+      const form = document.getElementById("download-form");
+      const statusEl = document.getElementById("download-status");
+      const hintEl = document.getElementById("download-hint");
+      const fileLink = document.getElementById("download-file-link");
+      const base = (window.STORE_CONFIG?.apiBaseUrl || "").replace(/\/$/, "");
+
+      if (params.get("licenseKey")) licenseInput.value = params.get("licenseKey");
+      if (params.get("packageId")) packageInput.value = params.get("packageId");
+
+      if (typeof window.ensureCatalogLoaded === "function") {
+        await window.ensureCatalogLoaded();
+      }
+      const packages = window.PACKAGES_CATALOG || [];
+      if (packages.length && !packageInput.value) {
+        packageInput.placeholder = packages[0].id;
+      }
+
+      form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        hintEl.hidden = true;
+        statusEl.textContent = "";
+
+        if (!base) {
+          statusEl.textContent = "Set apiBaseUrl in assets/js/config.js first.";
+          return;
+        }
+
+        const licenseKey = licenseInput.value.trim();
+        const packageId = packageInput.value.trim();
+
+        statusEl.textContent = "Validating license…";
+
+        try {
+          const res = await fetch(`${base}/api/downloads/request`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ licenseKey, packageId })
+          });
+          const data = await res.json();
+
+          if (!res.ok) {
+            statusEl.textContent = data.error || "Download not available.";
+            return;
+          }
+
+          statusEl.textContent = "License valid. Your download link is ready (expires in 10 minutes).";
+          fileLink.href = data.downloadUrl;
+          fileLink.textContent = `Download ${packageId}.zip`;
+          hintEl.hidden = false;
+        } catch {
+          statusEl.textContent = "Could not reach the download API.";
+        }
+      });
+    })();
+  </script>
+</body>
+</html>

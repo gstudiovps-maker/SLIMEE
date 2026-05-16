@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Admin | Slimee Store</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../assets/css/styles.css">
+  <link rel="stylesheet" href="../assets/css/admin.css">
+</head>
+<body class="page-admin">
+  <div class="admin-shell">
+    <section id="admin-login" class="admin-login-card">
+      <h1>Store admin</h1>
+      <p>Sign in with your Render-configured account. Credentials are never stored in GitHub.</p>
+      <p id="admin-login-msg" class="admin-msg is-error" hidden role="alert"></p>
+      <form id="admin-login-form">
+        <label class="admin-field">
+          <span>Username</span>
+          <input id="admin-username" name="username" type="text" autocomplete="username" required />
+        </label>
+        <label class="admin-field">
+          <span>Password</span>
+          <input id="admin-password" name="password" type="password" autocomplete="current-password" required />
+        </label>
+        <button type="submit" class="tebex-btn-primary" style="width:100%">Sign in</button>
+      </form>
+    </section>
+
+    <section id="admin-panel" class="admin-panel" hidden>
+      <div class="admin-toolbar">
+        <h1>Package catalog</h1>
+        <div style="display:flex;align-items:center;gap:0.65rem;flex-wrap:wrap">
+          <span id="admin-user-pill" class="admin-user-pill"></span>
+          <button type="button" class="tebex-btn-ghost" id="admin-logout" style="width:auto;margin:0">Log out</button>
+        </div>
+      </div>
+
+      <p id="admin-panel-msg" class="admin-msg" hidden role="status"></p>
+
+      <div class="admin-grid">
+        <div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem">
+            <strong>Packages</strong>
+            <button type="button" class="tebex-btn-primary" id="admin-new-package" style="min-height:38px;padding:0.5rem 0.85rem;font-size:0.85rem">New</button>
+          </div>
+          <ul id="admin-package-list" class="admin-package-list"></ul>
+        </div>
+
+        <form id="admin-editor-form">
+          <h2 style="margin:0 0 1rem;font-size:1.05rem">Edit package</h2>
+          <label class="admin-field">
+            <span>Package ID (slug)</span>
+            <input id="pkg-id" required pattern="[a-zA-Z0-9][a-zA-Z0-9-]*" />
+          </label>
+          <label class="admin-field">
+            <span>Name</span>
+            <input id="pkg-name" required />
+          </label>
+          <label class="admin-field">
+            <span>Category</span>
+            <select id="pkg-category">
+              <option>Scripts</option>
+              <option>Maps</option>
+              <option>MLO</option>
+              <option>Clothing</option>
+              <option>Weapons</option>
+            </select>
+          </label>
+          <label class="admin-field">
+            <span>Price amount</span>
+            <input id="pkg-price-amount" inputmode="decimal" required />
+          </label>
+          <label class="admin-field">
+            <span>Currency</span>
+            <input id="pkg-currency" value="USD" maxlength="8" />
+          </label>
+          <label class="admin-field">
+            <span>Short description</span>
+            <textarea id="pkg-description" rows="3"></textarea>
+          </label>
+          <label class="admin-field">
+            <span>Tags (comma separated)</span>
+            <input id="pkg-tags" placeholder="Jobs, Roleplay" />
+          </label>
+          <label class="admin-field">
+            <span>Card image URL</span>
+            <input id="pkg-card-image" placeholder="../assets/img/..." />
+          </label>
+          <label class="admin-field">
+            <span>YouTube URL</span>
+            <input id="pkg-video" />
+          </label>
+          <label class="admin-field">
+            <span>Detail intro</span>
+            <textarea id="pkg-detail-intro" rows="2"></textarea>
+          </label>
+          <label class="admin-field">
+            <span>Detail sections (JSON array)</span>
+            <textarea id="pkg-detail-sections" rows="6">[]</textarea>
+          </label>
+          <label class="admin-field" style="flex-direction:row;align-items:center;gap:0.5rem">
+            <input id="pkg-featured" type="checkbox" />
+            <span>Featured on shop</span>
+          </label>
+          <label class="admin-field" style="flex-direction:row;align-items:center;gap:0.5rem">
+            <input id="pkg-published" type="checkbox" checked />
+            <span>Published (visible on storefront)</span>
+          </label>
+          <div class="admin-editor-actions">
+            <button type="submit" class="tebex-btn-primary">Save package</button>
+            <button type="button" class="tebex-btn-ghost" id="admin-delete-package" style="width:auto;margin:0" disabled>Delete</button>
+          </div>
+        </form>
+      </div>
+
+      <section id="admin-logs-panel" class="admin-logs-panel" hidden>
+        <h2>Admin activity log</h2>
+        <p style="margin:0 0 0.75rem;color:var(--muted);font-size:0.88rem">Only the main admin can see this. Other admins cannot view audit logs.</p>
+        <div class="admin-logs-table-wrap">
+          <table class="admin-logs-table">
+            <thead>
+              <tr>
+                <th>Time</th>
+                <th>User</th>
+                <th>Action</th>
+                <th>Target</th>
+                <th>IP</th>
+              </tr>
+            </thead>
+            <tbody id="admin-logs-body"></tbody>
+          </table>
+        </div>
+      </section>
+    </section>
+  </div>
+
+  <script>window.STORE_REPO_PREFIX = "..";</script>
+  <script src="../assets/js/config.js"></script>
+  <script src="../assets/js/admin.js"></script>
+</body>
+</html>

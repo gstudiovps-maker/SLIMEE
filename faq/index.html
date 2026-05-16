@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Frequently asked questions for the Slimee Store FiveM package storefront.">
+  <title>FAQ | Slimee Store</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../assets/css/styles.css">
+</head>
+<body>
+  <div class="site-shell">
+    <header class="site-header">
+      <nav class="navbar" aria-label="Main navigation">
+        <a class="brand" href="../home/" aria-label="Slimee Store home">
+          <img class="brand-logo" src="../assets/img/logo.png" width="44" height="44" alt="" decoding="async" />
+          <span>
+            <strong>Slimee Store</strong>
+            <small>FiveM Packages</small>
+          </span>
+        </a>
+
+        <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="site-menu">
+          <span></span>
+          <span></span>
+          <span></span>
+          <span class="sr-only">Toggle navigation</span>
+        </button>
+
+        <div class="site-menu" id="site-menu">
+          <a href="../home/">Home</a>
+          <div class="nav-dropdown">
+            <button class="dropdown-toggle" type="button" aria-expanded="false">
+              Categories
+              <span aria-hidden="true">&#9662;</span>
+            </button>
+            <div class="dropdown-menu">
+              <a href="../scripts/">Scripts</a>
+              <a href="../maps/">Maps</a>
+              <a href="../mlo/">MLO</a>
+              <a href="../clothing/">Clothing</a>
+              <a href="../weapons/">Weapons</a>
+            </div>
+          </div>
+          <a href="../store/">Shop</a>
+          <a href="../about/">About</a>
+          <a class="is-active" href="../faq/">FAQ</a>
+          <a class="nav-discord" href="#" aria-label="Discord link placeholder">Join Discord</a>
+        </div>
+      </nav>
+    </header>
+
+    <main>
+      <section class="page-hero">
+        <p class="eyebrow">Help Center</p>
+        <h1>Frequently asked questions.</h1>
+        <p>
+          Use this page for store rules, checkout notes, delivery information, refund
+          policies, and links to your Discord support channel.
+        </p>
+      </section>
+
+      <section class="faq-section">
+        <div class="faq-list">
+          <details open>
+            <summary>Can this website process payments directly?</summary>
+            <p>
+              No. GitHub Pages is static hosting, so real payments should go through a hosted
+              checkout provider such as Tebex, PayPal, Stripe Checkout, or another payment service.
+            </p>
+          </details>
+          <details>
+            <summary>How do I connect a package to Tebex?</summary>
+            <p>
+              Create the product in Tebex, copy its checkout or package URL, then paste that URL
+              into the matching <code>checkoutUrl</code> field in <code>content/packages.json</code>.
+            </p>
+          </details>
+          <details>
+            <summary>Where do I change resource names and prices?</summary>
+            <p>
+              Open <code>content/packages.json</code> in this repo and edit the <code>packages</code> array.
+              The store page automatically renders the cards from that data.
+            </p>
+          </details>
+          <details>
+            <summary>Can I add more pages?</summary>
+            <p>
+              Yes. Copy one of the existing HTML pages, update the page content, and add the new
+              link to the navigation and footer on each page.
+            </p>
+          </details>
+          <details>
+            <summary>How do customers get support?</summary>
+            <p>
+              Replace the Discord placeholder links with your server invite or support ticket URL.
+              You can also add rules, terms, or refund details directly on this page.
+            </p>
+          </details>
+        </div>
+      </section>
+
+      <section class="content-panel support-panel">
+        <p class="eyebrow">Need Support?</p>
+        <h2>Connect your Discord link</h2>
+        <p>
+          The Discord buttons currently use <code>#</code> placeholders. Replace them with your
+          community invite or support ticket page when your server links are ready.
+        </p>
+        <a class="button button-primary" href="#">Join Discord</a>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div>
+        <strong>Slimee Store</strong>
+        <p>FiveM package storefront template for GitHub Pages.</p>
+      </div>
+      <div class="footer-links">
+        <a href="../home/">Home</a>
+        <a href="../store/">Shop</a>
+        <a href="../scripts/">Scripts</a>
+        <a href="../maps/">Maps</a>
+        <a href="../about/">About</a>
+        <a href="#">Discord</a>
+      </div>
+    </footer>
+  </div>
+
+  <script>window.STORE_REPO_PREFIX = "..";</script>
+  <script src="../assets/js/paths.js"></script>
+  <script src="../assets/js/config.js"></script>
+  <script src="../assets/js/catalog.js"></script>
+  <script src="../assets/js/cart.js"></script>
+  <script src="../assets/js/nav-enhance.js"></script>
+  <script src="../assets/js/checkout.js"></script>
+  <script src="../assets/js/main.js"></script>
+</body>
+</html>

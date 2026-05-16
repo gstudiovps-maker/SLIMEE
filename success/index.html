@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Order complete | Slimee Store</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../assets/css/styles.css">
+</head>
+<body class="page-success">
+  <div class="site-shell">
+    <header class="site-header">
+      <nav class="navbar" aria-label="Main navigation">
+        <a class="brand" href="../home/" aria-label="Slimee Store home">
+          <img class="brand-logo" src="../assets/img/logo.png" width="44" height="44" alt="" decoding="async" />
+          <span>
+            <strong>Slimee Store</strong>
+            <small>FiveM Packages</small>
+          </span>
+        </a>
+      </nav>
+    </header>
+
+    <main class="success-main">
+      <section class="success-panel glass-card" id="success-panel" aria-live="polite">
+        <p class="eyebrow">Payment received</p>
+        <h1>Thank you for your purchase</h1>
+        <p id="success-status">Loading your license…</p>
+        <div id="success-multi-wrap" hidden>
+          <p class="success-label">Your license keys</p>
+          <ul id="success-license-list" class="success-license-list"></ul>
+          <div class="success-actions">
+            <a class="button button-primary" href="../download/">Download center</a>
+            <a class="button button-secondary" href="../store/">Back to shop</a>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script>window.STORE_REPO_PREFIX = "..";</script>
+  <script src="../assets/js/paths.js"></script>
+  <script src="../assets/js/config.js"></script>
+  <script src="../assets/js/cart.js"></script>
+  <script>
+    (async function () {
+      function escapeHtml(value) {
+        return String(value ?? "")
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;");
+      }
+
+      const params = new URLSearchParams(window.location.search);
+      const sessionId = params.get("session_id");
+      const statusEl = document.getElementById("success-status");
+      const base = (window.STORE_CONFIG?.apiBaseUrl || "").replace(/\/$/, "");
+
+      if (!sessionId) {
+        statusEl.textContent = "Missing checkout session. Return to the shop and try again.";
+        return;
+      }
+
+      if (!base) {
+        statusEl.textContent = "Set apiBaseUrl in assets/js/config.js to load your license.";
+        return;
+      }
+
+      try {
+        const res = await fetch(`${base}/api/orders/session/${encodeURIComponent(sessionId)}`);
+        const data = await res.json();
+
+        if (!res.ok) {
+          statusEl.textContent = data.error || "Could not load your order.";
+          return;
+        }
+
+        if (typeof window.SlimeeCart?.clearCart === "function") {
+          window.SlimeeCart.clearCart();
+        }
+
+        const licenses = Array.isArray(data.licenses) && data.licenses.length
+          ? data.licenses
+          : [{ licenseKey: data.licenseKey, packageId: data.packageId, packageName: data.packageName }];
+
+        statusEl.textContent =
+          licenses.length > 1
+            ? "Save these keys — each one unlocks downloads and validation for its package."
+            : "Save this key — you will need it to download and validate your script.";
+
+        const listEl = document.getElementById("success-license-list");
+        listEl.innerHTML = licenses
+          .map(
+            (L) => `
+          <li class="success-license-item glass-card">
+            <div class="success-license-item-head">
+              <strong>${escapeHtml(L.packageName || L.packageId)}</strong>
+              <code class="success-license-code">${escapeHtml(L.licenseKey)}</code>
+            </div>
+            <div class="success-license-item-actions">
+              <button type="button" class="button button-secondary success-copy-btn" data-key="${escapeHtml(L.licenseKey)}">Copy key</button>
+              <a class="button button-primary" href="${window.storeHref("download", `licenseKey=${encodeURIComponent(L.licenseKey)}&packageId=${encodeURIComponent(L.packageId)}`)}">Download</a>
+            </div>
+          </li>`
+          )
+          .join("");
+
+        listEl.querySelectorAll(".success-copy-btn").forEach((btn) => {
+          btn.addEventListener("click", async () => {
+            const k = btn.getAttribute("data-key");
+            try {
+              await navigator.clipboard.writeText(k);
+              btn.textContent = "Copied";
+              setTimeout(() => { btn.textContent = "Copy key"; }, 1500);
+            } catch {
+              btn.textContent = "Copy failed";
+            }
+          });
+        });
+
+        document.getElementById("success-multi-wrap").hidden = false;
+      } catch {
+        statusEl.textContent = "Network error loading your license. Refresh in a moment.";
+      }
+    })();
+  </script>
+</body>
+</html>

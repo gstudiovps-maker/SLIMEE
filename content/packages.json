@@ -1,0 +1,213 @@
+{
+  "packages": [
+    {
+      "id": "advanced-job-system",
+      "name": "Advanced Job System",
+      "category": "Scripts",
+      "price": "$19.99",
+      "priceAmount": "19.99",
+      "currency": "USD",
+      "description": "A polished job script placeholder for roleplay servers with editable features.",
+      "tags": [
+        "Jobs",
+        "Roleplay",
+        "Configurable"
+      ],
+      "featured": true,
+      "checkoutUrl": "",
+      "videoPreviewUrl": "https://www.youtube.com/watch?v=jNQXAC9IVRw",
+      "gallery": [
+        "assets/img/package-detail-sample.png"
+      ],
+      "detailIntro": "Give players structured work, progression, and payouts with a configurable job loop built for busy roleplay servers.",
+      "detailSections": [
+        {
+          "title": "Job loop & progression",
+          "paragraphs": [
+            "Define stages, checks, and rewards so jobs feel consistent without hard-coding every scenario. Built as a template you can extend with your own tasks and UI."
+          ]
+        },
+        {
+          "title": "Key features",
+          "bullets": [
+            "Role-based permissions and duty toggles",
+            "Server-friendly timers and cooldown hooks",
+            "Clean exports for other resources to hook into",
+            "Optimized event flow for medium population servers"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "dispatch-toolkit",
+      "name": "Dispatch Toolkit",
+      "category": "Scripts",
+      "price": "$14.99",
+      "priceAmount": "14.99",
+      "currency": "USD",
+      "description": "Server utility placeholder for alerts, calls, and emergency roleplay workflows.",
+      "tags": [
+        "Police",
+        "EMS",
+        "Utility"
+      ],
+      "featured": false,
+      "checkoutUrl": "",
+      "videoPreviewUrl": "",
+      "gallery": [],
+      "detailSections": []
+    },
+    {
+      "id": "city-expansion-map",
+      "name": "City Expansion Map",
+      "category": "Maps",
+      "price": "$24.99",
+      "priceAmount": "24.99",
+      "currency": "USD",
+      "description": "A map expansion placeholder for new roleplay zones and server landmarks.",
+      "tags": [
+        "City",
+        "Landmarks",
+        "Add-on"
+      ],
+      "featured": true,
+      "checkoutUrl": "",
+      "videoPreviewUrl": "",
+      "gallery": [],
+      "detailSections": []
+    },
+    {
+      "id": "county-roads-pack",
+      "name": "County Roads Pack",
+      "category": "Maps",
+      "price": "$12.99",
+      "priceAmount": "12.99",
+      "currency": "USD",
+      "description": "A rural roads and scenery pack placeholder for expanding travel routes.",
+      "tags": [
+        "County",
+        "Roads",
+        "Scenery"
+      ],
+      "featured": false,
+      "checkoutUrl": "",
+      "videoPreviewUrl": "",
+      "gallery": [],
+      "detailSections": []
+    },
+    {
+      "id": "luxury-dealership-mlo",
+      "name": "Luxury Dealership MLO",
+      "category": "MLO",
+      "price": "$34.99",
+      "priceAmount": "34.99",
+      "currency": "USD",
+      "description": "A premium dealership interior placeholder for vehicle sales and roleplay.",
+      "tags": [
+        "Interior",
+        "Business",
+        "Vehicles"
+      ],
+      "featured": true,
+      "checkoutUrl": "",
+      "videoPreviewUrl": "",
+      "gallery": [],
+      "detailSections": []
+    },
+    {
+      "id": "downtown-cafe-mlo",
+      "name": "Downtown Cafe MLO",
+      "category": "MLO",
+      "price": "$16.99",
+      "priceAmount": "16.99",
+      "currency": "USD",
+      "description": "A compact social interior placeholder for civilian jobs and hangouts.",
+      "tags": [
+        "Interior",
+        "Cafe",
+        "Civilian"
+      ],
+      "featured": false,
+      "checkoutUrl": "",
+      "videoPreviewUrl": "",
+      "gallery": [],
+      "detailSections": []
+    },
+    {
+      "id": "community-clothing-pack",
+      "name": "Community Clothing Pack",
+      "category": "Clothing",
+      "price": "$11.99",
+      "priceAmount": "11.99",
+      "currency": "USD",
+      "description": "A starter clothing pack placeholder with outfits for civilians and staff.",
+      "tags": [
+        "Outfits",
+        "Staff",
+        "Civilian"
+      ],
+      "featured": false,
+      "checkoutUrl": "",
+      "videoPreviewUrl": "",
+      "gallery": [],
+      "detailSections": []
+    },
+    {
+      "id": "emergency-uniform-pack",
+      "name": "Emergency Uniform Pack",
+      "category": "Clothing",
+      "price": "$18.99",
+      "priceAmount": "18.99",
+      "currency": "USD",
+      "description": "A uniform placeholder pack for police, EMS, and department roleplay.",
+      "tags": [
+        "Police",
+        "EMS",
+        "Uniforms"
+      ],
+      "featured": true,
+      "checkoutUrl": "",
+      "videoPreviewUrl": "",
+      "gallery": [],
+      "detailSections": []
+    },
+    {
+      "id": "tactical-weapons-pack",
+      "name": "Tactical Weapons Pack",
+      "category": "Weapons",
+      "price": "$21.99",
+      "priceAmount": "21.99",
+      "currency": "USD",
+      "description": "A weapon pack placeholder for custom assets, attachments, and balancing.",
+      "tags": [
+        "Tactical",
+        "Attachments",
+        "Balanced"
+      ],
+      "featured": false,
+      "checkoutUrl": "",
+      "videoPreviewUrl": "",
+      "gallery": [],
+      "detailSections": []
+    },
+    {
+      "id": "classic-weapons-pack",
+      "name": "Classic Weapons Pack",
+      "category": "Weapons",
+      "price": "$15.99",
+      "priceAmount": "15.99",
+      "currency": "USD",
+      "description": "A classic weapon collection placeholder for server-safe customization.",
+      "tags": [
+        "Classic",
+        "Props",
+        "Configurable"
+      ],
+      "featured": false,
+      "checkoutUrl": "",
+      "videoPreviewUrl": "",
+      "gallery": [],
+      "detailSections": []
+    }
+  ]
+}

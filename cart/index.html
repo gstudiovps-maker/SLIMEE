@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Your cart — Slimee Store">
+  <title>Cart | Slimee Store</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../assets/css/styles.css">
+</head>
+<body class="page-cart tebex-cart-page">
+  <div class="site-shell">
+    <header class="site-header">
+      <nav class="navbar" aria-label="Main navigation">
+        <a class="brand" href="../home/" aria-label="Slimee Store home">
+          <img class="brand-logo" src="../assets/img/logo.png" width="44" height="44" alt="" decoding="async" />
+          <span>
+            <strong>Slimee Store</strong>
+            <small>FiveM Packages</small>
+          </span>
+        </a>
+
+        <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="site-menu">
+          <span></span>
+          <span></span>
+          <span></span>
+          <span class="sr-only">Toggle navigation</span>
+        </button>
+
+        <div class="site-menu" id="site-menu">
+          <a href="../home/">Home</a>
+          <div class="nav-dropdown">
+            <button class="dropdown-toggle" type="button" aria-expanded="false">
+              Categories
+              <span aria-hidden="true">&#9662;</span>
+            </button>
+            <div class="dropdown-menu">
+              <a href="../scripts/">Scripts</a>
+              <a href="../maps/">Maps</a>
+              <a href="../mlo/">MLO</a>
+              <a href="../clothing/">Clothing</a>
+              <a href="../weapons/">Weapons</a>
+            </div>
+          </div>
+          <a href="../store/">Shop</a>
+          <a href="../about/">About</a>
+          <a href="../faq/">FAQ</a>
+        </div>
+      </nav>
+    </header>
+
+    <main class="cart-page-main">
+      <header class="cart-tebex-header">
+        <h1>Cart</h1>
+        <p>Review your packages before checkout</p>
+      </header>
+
+      <div id="cart-empty" class="cart-tebex-empty" hidden>
+        <p>Your cart is empty.</p>
+        <a class="button tebex-btn-primary" href="../store/">Browse products</a>
+      </div>
+
+      <div id="cart-filled" class="cart-tebex-layout" hidden>
+        <section class="cart-tebex-items-panel" aria-label="Cart items">
+          <ul class="cart-tebex-lines" id="cart-lines"></ul>
+        </section>
+
+        <aside class="cart-tebex-summary" aria-label="Order summary">
+          <h2 class="cart-tebex-summary-title">Order summary</h2>
+          <dl class="cart-tebex-summary-rows">
+            <div>
+              <dt>Items</dt>
+              <dd id="cart-item-count">0</dd>
+            </div>
+            <div>
+              <dt>Subtotal</dt>
+              <dd id="cart-subtotal">$0.00</dd>
+            </div>
+          </dl>
+          <div class="cart-tebex-summary-total">
+            <span>Total</span>
+            <strong id="cart-total-display">$0.00 USD</strong>
+          </div>
+          <p class="cart-tebex-summary-note">Taxes and final amount confirmed at Stripe checkout.</p>
+          <button type="button" class="tebex-btn-primary tebex-btn-checkout" id="cart-checkout-btn">
+            Checkout
+          </button>
+          <button type="button" class="tebex-btn-ghost" id="cart-clear-btn">Clear cart</button>
+          <p id="cart-checkout-msg" class="cart-checkout-msg" role="status" aria-live="polite"></p>
+          <a class="cart-tebex-continue" href="../store/">Continue shopping</a>
+        </aside>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div>
+        <strong>Slimee Store</strong>
+        <p>FiveM package storefront template for GitHub Pages.</p>
+      </div>
+      <div class="footer-links">
+        <a href="../home/">Home</a>
+        <a href="../store/">Shop</a>
+        <a href="../faq/">FAQ</a>
+      </div>
+    </footer>
+  </div>
+
+  <div class="toast" id="checkout-toast" role="status" aria-live="polite"></div>
+  <script>window.STORE_REPO_PREFIX = "..";</script>
+  <script src="../assets/js/paths.js"></script>
+  <script src="../assets/js/config.js"></script>
+  <script src="../assets/js/catalog.js"></script>
+  <script src="../assets/js/cart.js"></script>
+  <script src="../assets/js/nav-enhance.js"></script>
+  <script src="../assets/js/checkout.js"></script>
+  <script src="../assets/js/main.js"></script>
+  <script src="../assets/js/cart-page.js"></script>
+</body>
+</html>

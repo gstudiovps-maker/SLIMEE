@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Browse FiveM MLO resources from Slimee Store.">
+  <title>MLO | Slimee Store</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../assets/css/styles.css">
+</head>
+<body>
+  <div class="site-shell">
+    <header class="site-header">
+      <nav class="navbar" aria-label="Main navigation">
+        <a class="brand" href="../home/" aria-label="Slimee Store home">
+          <img class="brand-logo" src="../assets/img/logo.png" width="44" height="44" alt="" decoding="async" />
+          <span>
+            <strong>Slimee Store</strong>
+            <small>FiveM Packages</small>
+          </span>
+        </a>
+
+        <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="site-menu">
+          <span></span>
+          <span></span>
+          <span></span>
+          <span class="sr-only">Toggle navigation</span>
+        </button>
+
+        <div class="site-menu" id="site-menu">
+          <a href="../home/">Home</a>
+          <div class="nav-dropdown">
+            <button class="dropdown-toggle is-active" type="button" aria-expanded="false">
+              Categories
+              <span aria-hidden="true">&#9662;</span>
+            </button>
+            <div class="dropdown-menu">
+              <a href="../scripts/">Scripts</a>
+              <a href="../maps/">Maps</a>
+              <a class="is-active" href="../mlo/">MLO</a>
+              <a href="../clothing/">Clothing</a>
+              <a href="../weapons/">Weapons</a>
+            </div>
+          </div>
+          <a href="../store/">Shop</a>
+          <a href="../about/">About</a>
+          <a href="../faq/">FAQ</a>
+          <a class="nav-discord" href="#" aria-label="Discord link placeholder">Join Discord</a>
+        </div>
+      </nav>
+    </header>
+
+    <main>
+      <section class="page-hero">
+        <p class="eyebrow">Category</p>
+        <h1>MLO</h1>
+        <p>Browse interiors, businesses, departments, and roleplay locations for FiveM servers.</p>
+      </section>
+
+      <section class="catalog-panel" aria-label="MLO catalog">
+        <div class="package-grid" id="package-grid" data-category-page="MLO"></div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div>
+        <strong>Slimee Store</strong>
+        <p>FiveM package storefront template for GitHub Pages.</p>
+      </div>
+      <div class="footer-links">
+        <a href="../store/">Shop</a>
+        <a href="../scripts/">Scripts</a>
+        <a href="../maps/">Maps</a>
+        <a href="../faq/">FAQ</a>
+        <a href="#">Discord</a>
+      </div>
+    </footer>
+  </div>
+
+  <div class="toast" id="checkout-toast" role="status" aria-live="polite"></div>
+  <script>window.STORE_REPO_PREFIX = "..";</script>
+  <script src="../assets/js/paths.js"></script>
+  <script src="../assets/js/config.js"></script>
+  <script src="../assets/js/catalog.js"></script>
+  <script src="../assets/js/cart.js"></script>
+  <script src="../assets/js/nav-enhance.js"></script>
+  <script src="../assets/js/checkout.js"></script>
+  <script src="../assets/js/main.js"></script>
+</body>
+</html>

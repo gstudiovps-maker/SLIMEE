@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Learn how the Slimee Store FiveM storefront template works.">
+  <title>About | Slimee Store</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../assets/css/styles.css">
+</head>
+<body>
+  <div class="site-shell">
+    <header class="site-header">
+      <nav class="navbar" aria-label="Main navigation">
+        <a class="brand" href="../home/" aria-label="Slimee Store home">
+          <img class="brand-logo" src="../assets/img/logo.png" width="44" height="44" alt="" decoding="async" />
+          <span>
+            <strong>Slimee Store</strong>
+            <small>FiveM Packages</small>
+          </span>
+        </a>
+
+        <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="site-menu">
+          <span></span>
+          <span></span>
+          <span></span>
+          <span class="sr-only">Toggle navigation</span>
+        </button>
+
+        <div class="site-menu" id="site-menu">
+          <a href="../home/">Home</a>
+          <div class="nav-dropdown">
+            <button class="dropdown-toggle" type="button" aria-expanded="false">
+              Categories
+              <span aria-hidden="true">&#9662;</span>
+            </button>
+            <div class="dropdown-menu">
+              <a href="../scripts/">Scripts</a>
+              <a href="../maps/">Maps</a>
+              <a href="../mlo/">MLO</a>
+              <a href="../clothing/">Clothing</a>
+              <a href="../weapons/">Weapons</a>
+            </div>
+          </div>
+          <a href="../store/">Shop</a>
+          <a class="is-active" href="../about/">About</a>
+          <a href="../faq/">FAQ</a>
+          <a class="nav-discord" href="#" aria-label="Discord link placeholder">Join Discord</a>
+        </div>
+      </nav>
+    </header>
+
+    <main>
+      <section class="page-hero">
+        <p class="eyebrow">About The Store</p>
+        <h1>A clean storefront for your FiveM community.</h1>
+        <p>
+          This template gives your server a modern resource store on GitHub Pages,
+          with category pages and hosted checkout links when you are ready to sell.
+        </p>
+      </section>
+
+      <section class="split-section">
+        <div class="content-panel">
+          <p class="eyebrow">What It Is</p>
+          <h2>Static, fast, and easy to edit</h2>
+          <p>
+            The site is built with plain HTML, CSS, and JavaScript. That means it loads
+            quickly, works well on GitHub Pages, and does not require a backend server.
+          </p>
+          <a class="button button-primary" href="../store/">View Store</a>
+        </div>
+        <div class="content-panel">
+          <p class="eyebrow">What You Add</p>
+          <h2>Your branding and products</h2>
+          <p>
+            Replace the placeholder resources, update the store name, connect your Discord,
+            and paste checkout URLs from your payment provider.
+          </p>
+          <a class="button button-secondary" href="../faq/">Read FAQ</a>
+        </div>
+      </section>
+
+      <section class="info-grid">
+        <article class="info-card">
+          <span class="info-number">01</span>
+          <h3>Edit Package Data</h3>
+          <p>Resources are controlled from <code>content/packages.json</code> while the storefront is frontend-only on GitHub Pages.</p>
+        </article>
+        <article class="info-card">
+          <span class="info-number">02</span>
+          <h3>Update The Style</h3>
+          <p>Colors, spacing, mobile layout, and cards are controlled in <code>assets/css/styles.css</code>.</p>
+        </article>
+        <article class="info-card">
+          <span class="info-number">03</span>
+          <h3>Publish On GitHub</h3>
+          <p>Upload the files to a repository and enable GitHub Pages from the repository settings.</p>
+        </article>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div>
+        <strong>Slimee Store</strong>
+        <p>FiveM package storefront template for GitHub Pages.</p>
+      </div>
+      <div class="footer-links">
+        <a href="../home/">Home</a>
+        <a href="../store/">Shop</a>
+        <a href="../scripts/">Scripts</a>
+        <a href="../maps/">Maps</a>
+        <a href="../faq/">FAQ</a>
+        <a href="#">Discord</a>
+      </div>
+    </footer>
+  </div>
+
+  <script>window.STORE_REPO_PREFIX = "..";</script>
+  <script src="../assets/js/paths.js"></script>
+  <script src="../assets/js/config.js"></script>
+  <script src="../assets/js/catalog.js"></script>
+  <script src="../assets/js/cart.js"></script>
+  <script src="../assets/js/nav-enhance.js"></script>
+  <script src="../assets/js/checkout.js"></script>
+  <script src="../assets/js/main.js"></script>
+</body>
+</html>
