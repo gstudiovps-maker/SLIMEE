@@ -1,6 +1,7 @@
 import { pool } from "../db.js";
 import { config } from "../config.js";
 import { hashPassword } from "./auth.js";
+import { countAdminUsers, logAdminAuth, listAdminUsernames } from "./adminAuthLog.js";
 
 async function upsertAdmin(username, passwordHash, role) {
   const user = String(username || "").trim().toLowerCase();
@@ -16,12 +17,22 @@ async function upsertAdmin(username, passwordHash, role) {
          is_active = TRUE`,
     [user, passwordHash, role === "main" ? "main" : "admin"]
   );
+  logAdminAuth("info", "admin_user_upserted", { username: user, role });
   return true;
 }
 
 export async function seedAdminsFromEnv() {
-  if (!pool || !config.jwtSecret) {
-    return;
+  if (!pool) {
+    logAdminAuth("warn", "seed_skipped", { reason: "no_database_pool" });
+    return 0;
+  }
+
+  if (!config.jwtSecret) {
+    logAdminAuth("warn", "seed_skipped", {
+      reason: "jwt_secret_missing",
+      hint: "Set JWT_SECRET on Render before admin accounts can be created"
+    });
+    return 0;
   }
 
   let seeded = 0;
@@ -30,6 +41,11 @@ export async function seedAdminsFromEnv() {
     if (await upsertAdmin(config.mainAdminUsername, config.mainAdminPasswordHash, "main")) {
       seeded += 1;
     }
+  } else {
+    logAdminAuth("warn", "seed_main_admin_incomplete", {
+      hasUsername: Boolean(config.mainAdminUsername),
+      hasPasswordHash: Boolean(config.mainAdminPasswordHash)
+    });
   }
 
   const secondary = [
@@ -63,11 +79,17 @@ export async function seedAdminsFromEnv() {
         }
       }
     } catch (err) {
-      console.warn("[seed] ADMIN_SEED_JSON invalid:", err.message);
+      logAdminAuth("warn", "seed_admin_json_invalid", { error: err.message });
     }
   }
 
-  if (seeded > 0) {
-    console.log(`[seed] Ensured ${seeded} admin account(s) from environment`);
-  }
+  const total = await countAdminUsers();
+  const users = await listAdminUsernames();
+  logAdminAuth("info", "seed_complete", {
+    upsertedFromEnv: seeded,
+    activeAdminsInDb: total,
+    users: users.map((u) => u.username)
+  });
+
+  return seeded;
 }

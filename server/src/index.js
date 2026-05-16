@@ -10,6 +10,7 @@ import { packagesRouter } from "./routes/packages.js";
 import { adminRouter } from "./routes/admin.js";
 import { seedAdminsFromEnv } from "./lib/adminSeed.js";
 import { seedPackagesFromJsonIfEmpty } from "./lib/packages.js";
+import { logAdminStartupDiagnostics } from "./lib/adminAuthLog.js";
 
 assertConfig();
 
@@ -47,8 +48,11 @@ app.use("/api/downloads", downloadsRouter);
 app.use("/api/orders", ordersRouter);
 app.use("/api/admin", adminRouter);
 
-app.use((err, _req, res, _next) => {
+app.use((err, req, res, _next) => {
   if (err.message === "Not allowed by CORS") {
+    console.warn(
+      `[cors] blocked origin=${req.headers.origin || "(none)"} path=${req.method} ${req.path}`
+    );
     return res.status(403).json({ error: "CORS blocked" });
   }
   console.error(err);
@@ -57,8 +61,10 @@ app.use((err, _req, res, _next) => {
 
 async function bootstrap() {
   try {
+    await logAdminStartupDiagnostics();
     await seedPackagesFromJsonIfEmpty();
     await seedAdminsFromEnv();
+    await logAdminStartupDiagnostics();
   } catch (err) {
     console.error("[bootstrap]", err);
   }

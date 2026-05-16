@@ -9,8 +9,27 @@ import {
   deletePackageById
 } from "../lib/packages.js";
 import { requireAdmin, requireMainAdmin } from "../middleware/adminAuth.js";
+import {
+  countAdminUsers,
+  logAdminAuth,
+  logAdminStartupDiagnostics,
+  logLoginAttempt,
+  logLoginResult
+} from "../lib/adminAuthLog.js";
+import { pool } from "../db.js";
 
 export const adminRouter = express.Router();
+
+adminRouter.use((req, res, next) => {
+  if (req.method === "POST" && req.path === "/login") {
+    logAdminAuth("info", "login_request_received", {
+      origin: req.headers.origin || null,
+      hasBody: Boolean(req.body),
+      contentType: req.headers["content-type"] || null
+    });
+  }
+  next();
+});
 
 const loginAttempts = new Map();
 const LOGIN_WINDOW_MS = 15 * 60 * 1000;
@@ -49,34 +68,159 @@ function sanitizePackageInput(body) {
   };
 }
 
+/** Public diagnostics — no secrets; use Render logs for detail */
+adminRouter.get("/setup-status", async (_req, res) => {
+  const adminCount = await countAdminUsers();
+  return res.json({
+    ok: true,
+    database: Boolean(pool),
+    jwtConfigured: Boolean(config.jwtSecret),
+    mainAdminUsernameSet: Boolean(config.mainAdminUsername),
+    mainAdminHashSet: Boolean(config.mainAdminPasswordHash),
+    activeAdminCount: adminCount,
+    hint:
+      adminCount === 0
+        ? "No admins in DB — check JWT_SECRET and MAIN_ADMIN_* env vars, then redeploy"
+        : "If login fails, check Render logs for [admin-auth] lines"
+  });
+});
+
 adminRouter.post("/login", async (req, res) => {
+  const ip = clientIp(req);
+  const origin = req.headers.origin || null;
+
   try {
+    if (!pool) {
+      logLoginResult({
+        username: req.body?.username,
+        ip,
+        ok: false,
+        reason: "database_not_configured",
+        statusCode: 503
+      });
+      return res.status(503).json({ error: "Database is not configured on the server." });
+    }
+
     if (!config.jwtSecret) {
+      logLoginResult({
+        username: req.body?.username,
+        ip,
+        ok: false,
+        reason: "jwt_secret_missing",
+        statusCode: 503
+      });
       return res.status(503).json({ error: "Admin auth is not configured on the server." });
     }
 
-    const ip = clientIp(req);
     if (!checkLoginRateLimit(ip)) {
+      logLoginResult({
+        username: req.body?.username,
+        ip,
+        ok: false,
+        reason: "rate_limited",
+        statusCode: 429
+      });
       return res.status(429).json({ error: "Too many login attempts. Try again later." });
     }
 
     const username = String(req.body?.username || "").trim().toLowerCase();
     const password = String(req.body?.password || "");
 
+    logLoginAttempt({ username, ip, origin });
+
     if (!username || !password) {
+      logLoginResult({
+        username,
+        ip,
+        ok: false,
+        reason: "missing_username_or_password",
+        statusCode: 400
+      });
       return res.status(400).json({ error: "Username and password required" });
     }
 
     const user = await findAdminByUsername(username);
-    if (!user?.is_active) {
+    if (!user) {
+      const adminCount = await countAdminUsers();
+      logLoginResult({
+        username,
+        ip,
+        ok: false,
+        reason: "user_not_found",
+        statusCode: 401
+      });
+      logAdminAuth("warn", "login_user_not_found", {
+        username,
+        activeAdminCount: adminCount,
+        hint:
+          adminCount === 0
+            ? "No admins in database — verify MAIN_ADMIN_* env and redeploy"
+            : "Username does not match any admin in DB (usernames are lowercase)"
+      });
       return res.status(401).json({ error: "Invalid credentials" });
     }
 
-    const ok = await verifyAdminPassword(password, user.password_hash);
+    if (!user.is_active) {
+      logLoginResult({
+        username,
+        ip,
+        ok: false,
+        reason: "user_inactive",
+        statusCode: 401,
+        userId: user.id
+      });
+      return res.status(401).json({ error: "Invalid credentials" });
+    }
+
+    if (!user.password_hash) {
+      logLoginResult({
+        username,
+        ip,
+        ok: false,
+        reason: "empty_password_hash_in_db",
+        statusCode: 401,
+        userId: user.id
+      });
+      return res.status(401).json({ error: "Invalid credentials" });
+    }
+
+    let ok = false;
+    try {
+      ok = await verifyAdminPassword(password, user.password_hash);
+    } catch (bcryptErr) {
+      logAdminAuth("error", "bcrypt_compare_failed", {
+        username,
+        error: bcryptErr.message,
+        hashPrefix: String(user.password_hash).slice(0, 7)
+      });
+      logLoginResult({
+        username,
+        ip,
+        ok: false,
+        reason: "bcrypt_error",
+        statusCode: 500,
+        userId: user.id
+      });
+      return res.status(500).json({ error: "Login failed" });
+    }
+
     if (!ok) {
+      logLoginResult({
+        username,
+        ip,
+        ok: false,
+        reason: "bad_password",
+        statusCode: 401,
+        userId: user.id,
+        role: user.role
+      });
+      logAdminAuth("warn", "login_bad_password", {
+        username,
+        hint: "Password does not match MAIN_ADMIN_PASSWORD_HASH — re-hash with npm run hash-password"
+      });
       await logAdminActivity({
-        adminUserId: user?.id,
-        adminUsername: username.toLowerCase(),
+        adminUserId: user.id,
+        adminUsername: username,
         action: "login_failed",
         details: { reason: "bad_password" },
         ipAddress: ip
@@ -92,6 +236,16 @@ adminRouter.post("/login", async (req, res) => {
       ipAddress: ip
     });
 
+    logLoginResult({
+      username,
+      ip,
+      ok: true,
+      reason: "ok",
+      statusCode: 200,
+      userId: user.id,
+      role: user.role
+    });
+
     return res.json({
       token,
       user: {
@@ -100,7 +254,12 @@ adminRouter.post("/login", async (req, res) => {
       }
     });
   } catch (err) {
-    console.error("[admin login]", err);
+    logAdminAuth("error", "login_unhandled_error", {
+      username: req.body?.username,
+      ip,
+      error: err.message,
+      stack: err.stack
+    });
     return res.status(500).json({ error: "Login failed" });
   }
 });
