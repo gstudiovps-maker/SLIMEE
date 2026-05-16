@@ -40,7 +40,13 @@ export const config = {
   admin3PasswordHash: process.env.ADMIN3_PASSWORD_HASH || "",
   admin4Username: (process.env.ADMIN4_USERNAME || "").trim().toLowerCase(),
   admin4PasswordHash: process.env.ADMIN4_PASSWORD_HASH || "",
-  adminSeedJson: process.env.ADMIN_SEED_JSON || ""
+  adminSeedJson: process.env.ADMIN_SEED_JSON || "",
+  storageProvider: (process.env.STORAGE_PROVIDER || "local").toLowerCase(),
+  privateStorageDir: path.resolve(
+    serverRoot,
+    process.env.PRIVATE_STORAGE_DIR || path.join(repoRoot, "dont add", "private-storage")
+  ),
+  maxUploadMb: Number(process.env.MAX_UPLOAD_MB) || 250
 };
 
 export function assertConfig() {

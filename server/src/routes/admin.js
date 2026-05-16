@@ -8,6 +8,7 @@ import {
   upsertPackage,
   deletePackageById
 } from "../lib/packages.js";
+import { deletePackageSourceFile } from "../lib/packageFiles.js";
 import { requireAdmin, requireMainAdmin } from "../middleware/adminAuth.js";
 import {
   countAdminUsers,
@@ -61,10 +62,23 @@ function sanitizePackageInput(body) {
   if (!id || !/^[a-z0-9][a-z0-9-]{0,126}$/i.test(id)) {
     throw new Error("Invalid package id (use letters, numbers, hyphens)");
   }
+  const escrowRaw = raw.escrowIgnore ?? raw.escrow_ignore;
+  let escrowIgnore = [];
+  if (Array.isArray(escrowRaw)) {
+    escrowIgnore = escrowRaw.map((x) => String(x).trim()).filter(Boolean);
+  } else if (typeof escrowRaw === "string" && escrowRaw.trim()) {
+    escrowIgnore = escrowRaw
+      .split("\n")
+      .map((x) => x.trim())
+      .filter(Boolean);
+  }
+
   return {
     ...raw,
     id,
-    published: raw.published !== false
+    published: raw.published !== false,
+    protectionMode: raw.protectionMode || raw.protection_mode || "partial",
+    escrowIgnore
   };
 }
 
@@ -348,6 +362,7 @@ adminRouter.delete("/packages/:id", requireAdmin, async (req, res) => {
     if (!existing) {
       return res.status(404).json({ error: "Package not found" });
     }
+    await deletePackageSourceFile(id).catch(() => {});
     await deletePackageById(id);
     await logAdminActivity({
       adminUserId: req.admin.id,

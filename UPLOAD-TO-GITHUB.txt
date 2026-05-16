@@ -1,0 +1,65 @@
+HOW TO PUT THIS PROJECT ON GITHUB (without errors)
+================================================
+
+WHY UPLOAD FAILS
+----------------
+GitHub's website says "upload fewer than 100 files" when you drag the whole folder.
+server/node_modules/ alone is THOUSANDS of files. You must NEVER upload node_modules.
+
+WHAT TO UPLOAD (safe)
+---------------------
+Drag these in 2-3 batches if needed:
+
+  Batch 1 — site
+    assets/
+    content/
+    home/
+    store/  cart/  package/  success/  download/
+    about/  faq/  scripts/  maps/  mlo/  clothing/  weapons/
+    admin/
+    index.html
+    *.html redirect files at root (store.html, cart.html, etc.)
+
+  Batch 2 — server SOURCE ONLY (no node_modules!)
+    server/package.json
+    server/package-lock.json
+    server/src/
+    server/sql/
+    server/downloads/README.txt
+    server/README.md
+    server/.env.example
+    server/render.yaml  (if present)
+
+  Batch 3 — config
+    .gitignore
+    README.md
+    ARCHITECTURE.md
+    dont add/README.txt
+    dont add/server.env.example
+    dont add/downloads/README.txt
+    UPLOAD-TO-GITHUB.txt
+
+NEVER UPLOAD
+------------
+  server/node_modules/     ← Render installs this with npm install
+  dont add/server.env      ← your real passwords
+  dont add/downloads/*.zip
+  any .env file with real keys
+
+BETTER WAY (recommended)
+------------------------
+Use Git on your PC so .gitignore skips node_modules automatically:
+
+  cd "e:\WEBSITE TEMPLATE\Slimee"
+  git init
+  git add .
+  git commit -m "Initial store"
+  git remote add origin https://github.com/YOUR_USER/SLIMEE.git
+  git push -u origin main
+
+GITHUB PAGES vs RENDER
+------------------------
+  GitHub Pages  → frontend only (HTML/CSS/JS). No server folder needed to RUN the site.
+  Render        → connect same repo, set Root Directory to "server", Build: npm install, Start: npm start
+
+Your live shop reads packages from the Render API, not from server/ on Pages.

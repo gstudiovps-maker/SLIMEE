@@ -1,0 +1,244 @@
+/* Tebex-style product manager */
+.page-admin-dashboard {
+  background: #0b0f1a;
+  min-height: 100vh;
+}
+
+.admin-app {
+  display: grid;
+  grid-template-columns: 240px minmax(0, 1fr);
+  min-height: 100vh;
+}
+
+.admin-sidebar {
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  background: linear-gradient(180deg, #0d1220 0%, #090d16 100%);
+  padding: 1.25rem 0.85rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.admin-brand {
+  padding: 0 0.5rem 0.75rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.admin-brand strong {
+  display: block;
+  font-size: 1.05rem;
+}
+
+.admin-brand small {
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+
+.admin-nav {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.admin-nav button {
+  width: 100%;
+  text-align: left;
+  padding: 0.65rem 0.75rem;
+  border: 0;
+  border-radius: 10px;
+  color: var(--muted);
+  font-weight: 700;
+  font-size: 0.88rem;
+  background: transparent;
+  cursor: pointer;
+}
+
+.admin-nav button:hover,
+.admin-nav button.is-active {
+  color: var(--text);
+  background: rgba(59, 130, 246, 0.14);
+}
+
+.admin-nav button.is-active {
+  color: #93c5fd;
+}
+
+.admin-main {
+  padding: 1.25rem 1.5rem 2.5rem;
+  overflow: auto;
+}
+
+.admin-topbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.admin-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.85rem;
+  margin-bottom: 1.25rem;
+}
+
+.admin-stat-card {
+  padding: 1rem 1.1rem;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.admin-stat-card span {
+  display: block;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.admin-stat-card strong {
+  display: block;
+  margin-top: 0.35rem;
+  font-size: 1.45rem;
+}
+
+.admin-product-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 0.85rem;
+  margin-bottom: 1.25rem;
+}
+
+.admin-product-card {
+  padding: 1rem;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.03);
+  cursor: pointer;
+  transition: border-color 160ms ease, transform 160ms ease;
+}
+
+.admin-product-card:hover,
+.admin-product-card.is-active {
+  border-color: rgba(96, 165, 250, 0.45);
+  transform: translateY(-2px);
+}
+
+.admin-product-card h3 {
+  margin: 0 0 0.35rem;
+  font-size: 0.98rem;
+}
+
+.admin-product-card .meta {
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.admin-editor-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 380px);
+  gap: 1rem;
+  align-items: start;
+}
+
+.admin-panel-card {
+  padding: 1.15rem;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(12, 17, 32, 0.9);
+}
+
+.admin-dropzone {
+  border: 2px dashed rgba(96, 165, 250, 0.35);
+  border-radius: 14px;
+  padding: 1.5rem 1rem;
+  text-align: center;
+  color: var(--muted);
+  background: rgba(59, 130, 246, 0.06);
+  transition: border-color 160ms ease, background 160ms ease;
+}
+
+.admin-dropzone.is-dragover {
+  border-color: #60a5fa;
+  background: rgba(59, 130, 246, 0.14);
+  color: #dbeafe;
+}
+
+.admin-dropzone input {
+  display: none;
+}
+
+.admin-table-wrap {
+  overflow: auto;
+  max-height: 420px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+}
+
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+}
+
+.admin-table th,
+.admin-table td {
+  padding: 0.55rem 0.65rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  text-align: left;
+}
+
+.admin-table th {
+  position: sticky;
+  top: 0;
+  background: #0f1526;
+  color: var(--muted);
+}
+
+.admin-row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.admin-row-actions button {
+  padding: 0.3rem 0.5rem;
+  font-size: 0.72rem;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.admin-view[hidden] {
+  display: none !important;
+}
+
+@media (max-width: 1000px) {
+  .admin-app {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-sidebar {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  .admin-nav {
+    display: flex;
+    flex-wrap: wrap;
+  }
+
+  .admin-stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .admin-editor-layout {
+    grid-template-columns: 1fr;
+  }
+}

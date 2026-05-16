@@ -4,138 +4,158 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="robots" content="noindex, nofollow">
-  <title>Admin | Slimee Store</title>
+  <title>Product Manager | Slimee Store</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../assets/css/styles.css">
   <link rel="stylesheet" href="../assets/css/admin.css">
+  <link rel="stylesheet" href="../assets/css/admin-dashboard.css">
 </head>
-<body class="page-admin">
-  <div class="admin-shell">
-    <section id="admin-login" class="admin-login-card">
-      <h1>Store admin</h1>
-      <p>Sign in with your Render-configured account. Credentials are never stored in GitHub.</p>
-      <p id="admin-login-msg" class="admin-msg is-error" hidden role="alert"></p>
-      <form id="admin-login-form">
-        <label class="admin-field">
-          <span>Username</span>
-          <input id="admin-username" name="username" type="text" autocomplete="username" required />
-        </label>
-        <label class="admin-field">
-          <span>Password</span>
-          <input id="admin-password" name="password" type="password" autocomplete="current-password" required />
-        </label>
-        <button type="submit" class="tebex-btn-primary" style="width:100%">Sign in</button>
-      </form>
-    </section>
+<body class="page-admin page-admin-dashboard">
+  <section id="admin-login" class="admin-login-card">
+    <h1>Product Manager</h1>
+    <p>Protected Package Delivery — sign in with your Render admin account.</p>
+    <p id="admin-login-msg" class="admin-msg is-error" hidden role="alert"></p>
+    <form id="admin-login-form">
+      <label class="admin-field">
+        <span>Username</span>
+        <input id="admin-username" type="text" autocomplete="username" required />
+      </label>
+      <label class="admin-field">
+        <span>Password</span>
+        <input id="admin-password" type="password" autocomplete="current-password" required />
+      </label>
+      <button type="submit" class="tebex-btn-primary" style="width:100%">Sign in</button>
+    </form>
+  </section>
 
-    <section id="admin-panel" class="admin-panel" hidden>
-      <div class="admin-toolbar">
-        <h1>Package catalog</h1>
-        <div style="display:flex;align-items:center;gap:0.65rem;flex-wrap:wrap">
-          <span id="admin-user-pill" class="admin-user-pill"></span>
-          <button type="button" class="tebex-btn-ghost" id="admin-logout" style="width:auto;margin:0">Log out</button>
-        </div>
+  <div id="admin-app" class="admin-app" hidden>
+    <aside class="admin-sidebar">
+      <div class="admin-brand">
+        <strong>Slimee Manager</strong>
+        <small>Protected Package Delivery</small>
       </div>
+      <nav class="admin-nav" id="admin-nav">
+        <button type="button" data-view="dashboard" class="is-active">Dashboard</button>
+        <button type="button" data-view="products">Products</button>
+        <button type="button" data-view="licenses" id="nav-licenses" hidden>Licenses</button>
+        <button type="button" data-view="validation" id="nav-validation" hidden>Validation logs</button>
+        <button type="button" data-view="audit" id="nav-audit" hidden>Audit logs</button>
+      </nav>
+      <div style="margin-top:auto;padding:0.5rem">
+        <span id="admin-user-pill" class="admin-user-pill"></span>
+        <button type="button" class="tebex-btn-ghost" id="admin-logout" style="width:100%;margin-top:0.5rem">Log out</button>
+      </div>
+    </aside>
 
+    <main class="admin-main">
+      <div class="admin-topbar">
+        <h1 id="admin-view-title">Dashboard</h1>
+        <button type="button" class="tebex-btn-primary" id="admin-new-package" hidden>New product</button>
+      </div>
       <p id="admin-panel-msg" class="admin-msg" hidden role="status"></p>
 
-      <div class="admin-grid">
-        <div>
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem">
-            <strong>Packages</strong>
-            <button type="button" class="tebex-btn-primary" id="admin-new-package" style="min-height:38px;padding:0.5rem 0.85rem;font-size:0.85rem">New</button>
+      <section id="view-dashboard" class="admin-view">
+        <div id="admin-stats" class="admin-stats"></div>
+        <div class="admin-panel-card">
+          <h2 style="margin:0 0 0.75rem;font-size:1rem">Recent purchases</h2>
+          <div class="admin-table-wrap">
+            <table class="admin-table" id="recent-purchases-table">
+              <thead>
+                <tr><th>License</th><th>Package</th><th>Email</th><th>Status</th><th>Date</th></tr>
+              </thead>
+              <tbody></tbody>
+            </table>
           </div>
-          <ul id="admin-package-list" class="admin-package-list"></ul>
         </div>
+      </section>
 
-        <form id="admin-editor-form">
-          <h2 style="margin:0 0 1rem;font-size:1.05rem">Edit package</h2>
-          <label class="admin-field">
-            <span>Package ID (slug)</span>
-            <input id="pkg-id" required pattern="[a-zA-Z0-9][a-zA-Z0-9-]*" />
-          </label>
-          <label class="admin-field">
-            <span>Name</span>
-            <input id="pkg-name" required />
-          </label>
-          <label class="admin-field">
-            <span>Category</span>
-            <select id="pkg-category">
-              <option>Scripts</option>
-              <option>Maps</option>
-              <option>MLO</option>
-              <option>Clothing</option>
-              <option>Weapons</option>
-            </select>
-          </label>
-          <label class="admin-field">
-            <span>Price amount</span>
-            <input id="pkg-price-amount" inputmode="decimal" required />
-          </label>
-          <label class="admin-field">
-            <span>Currency</span>
-            <input id="pkg-currency" value="USD" maxlength="8" />
-          </label>
-          <label class="admin-field">
-            <span>Short description</span>
-            <textarea id="pkg-description" rows="3"></textarea>
-          </label>
-          <label class="admin-field">
-            <span>Tags (comma separated)</span>
-            <input id="pkg-tags" placeholder="Jobs, Roleplay" />
-          </label>
-          <label class="admin-field">
-            <span>Card image URL</span>
-            <input id="pkg-card-image" placeholder="../assets/img/..." />
-          </label>
-          <label class="admin-field">
-            <span>YouTube URL</span>
-            <input id="pkg-video" />
-          </label>
-          <label class="admin-field">
-            <span>Detail intro</span>
-            <textarea id="pkg-detail-intro" rows="2"></textarea>
-          </label>
-          <label class="admin-field">
-            <span>Detail sections (JSON array)</span>
-            <textarea id="pkg-detail-sections" rows="6">[]</textarea>
-          </label>
-          <label class="admin-field" style="flex-direction:row;align-items:center;gap:0.5rem">
-            <input id="pkg-featured" type="checkbox" />
-            <span>Featured on shop</span>
-          </label>
-          <label class="admin-field" style="flex-direction:row;align-items:center;gap:0.5rem">
-            <input id="pkg-published" type="checkbox" checked />
-            <span>Published (visible on storefront)</span>
-          </label>
-          <div class="admin-editor-actions">
-            <button type="submit" class="tebex-btn-primary">Save package</button>
-            <button type="button" class="tebex-btn-ghost" id="admin-delete-package" style="width:auto;margin:0" disabled>Delete</button>
+      <section id="view-products" class="admin-view" hidden>
+        <div id="admin-product-grid" class="admin-product-grid"></div>
+        <div id="admin-editor-wrap" class="admin-editor-layout" hidden>
+          <form id="admin-editor-form" class="admin-panel-card">
+            <h2 style="margin:0 0 1rem">Edit product</h2>
+            <label class="admin-field"><span>Package ID</span><input id="pkg-id" required pattern="[a-zA-Z0-9][a-zA-Z0-9-]*" /></label>
+            <label class="admin-field"><span>Name</span><input id="pkg-name" required /></label>
+            <label class="admin-field"><span>Category</span>
+              <select id="pkg-category"><option>Scripts</option><option>Maps</option><option>MLO</option><option>Clothing</option><option>Weapons</option></select>
+            </label>
+            <label class="admin-field"><span>Price</span><input id="pkg-price-amount" required /></label>
+            <label class="admin-field"><span>Currency</span><input id="pkg-currency" value="USD" /></label>
+            <label class="admin-field"><span>Description</span><textarea id="pkg-description" rows="2"></textarea></label>
+            <label class="admin-field"><span>Protection mode</span>
+              <select id="pkg-protection-mode">
+                <option value="open">Open source</option>
+                <option value="partial" selected>Partially protected (escrow_ignore)</option>
+                <option value="full">Fully protected</option>
+              </select>
+            </label>
+            <label class="admin-field"><span>escrow_ignore patterns (one per line)</span>
+              <textarea id="pkg-escrow-ignore" rows="6" placeholder="config/*.lua&#10;shared/utils/*.lua"></textarea>
+            </label>
+            <label class="admin-field"><span>Tags (comma separated)</span><input id="pkg-tags" /></label>
+            <label class="admin-field"><span>Detail sections JSON</span><textarea id="pkg-detail-sections" rows="4">[]</textarea></label>
+            <label class="admin-field" style="flex-direction:row;align-items:center;gap:0.5rem"><input id="pkg-featured" type="checkbox" /><span>Featured</span></label>
+            <label class="admin-field" style="flex-direction:row;align-items:center;gap:0.5rem"><input id="pkg-published" type="checkbox" checked /><span>Published</span></label>
+            <div class="admin-editor-actions">
+              <button type="submit" class="tebex-btn-primary">Save product</button>
+              <button type="button" class="tebex-btn-ghost" id="admin-delete-package" style="width:auto;margin:0">Delete</button>
+            </div>
+          </form>
+          <div class="admin-panel-card">
+            <h2 style="margin:0 0 0.5rem;font-size:1rem">Source ZIP upload</h2>
+            <p style="margin:0 0 0.75rem;color:var(--muted);font-size:0.82rem">Upload goes to Render private storage only — never GitHub.</p>
+            <div class="admin-dropzone" id="admin-dropzone">
+              <p><strong>Drag & drop</strong> development .zip here</p>
+              <p>or <label style="color:#60a5fa;cursor:pointer">browse<input type="file" id="pkg-zip-input" accept=".zip,application/zip" /></label></p>
+              <p id="pkg-upload-status" style="margin-top:0.75rem;font-size:0.8rem"></p>
+            </div>
           </div>
-        </form>
-      </div>
+        </div>
+      </section>
 
-      <section id="admin-logs-panel" class="admin-logs-panel" hidden>
-        <h2>Admin activity log</h2>
-        <p style="margin:0 0 0.75rem;color:var(--muted);font-size:0.88rem">Only the main admin can see this. Other admins cannot view audit logs.</p>
-        <div class="admin-logs-table-wrap">
-          <table class="admin-logs-table">
+      <section id="view-licenses" class="admin-view" hidden>
+        <div class="admin-panel-card" style="margin-bottom:1rem">
+          <label class="admin-field"><span>Search licenses / email / package</span>
+            <input id="license-search" placeholder="SLIMEE-... or email" />
+          </label>
+          <button type="button" class="tebex-btn-primary" id="license-search-btn">Search</button>
+        </div>
+        <div class="admin-table-wrap">
+          <table class="admin-table" id="licenses-table">
             <thead>
-              <tr>
-                <th>Time</th>
-                <th>User</th>
-                <th>Action</th>
-                <th>Target</th>
-                <th>IP</th>
-              </tr>
+              <tr><th>Key</th><th>Package</th><th>Email</th><th>Status</th><th>Bound IP</th><th>Actions</th></tr>
             </thead>
-            <tbody id="admin-logs-body"></tbody>
+            <tbody></tbody>
           </table>
         </div>
       </section>
-    </section>
+
+      <section id="view-validation" class="admin-view" hidden>
+        <div class="admin-panel-card">
+          <div style="display:flex;gap:0.5rem;margin-bottom:0.75rem">
+            <button type="button" class="tebex-btn-ghost" id="validation-all-btn" style="width:auto;margin:0">All</button>
+            <button type="button" class="tebex-btn-primary" id="validation-failed-btn" style="width:auto;margin:0">Failed only</button>
+          </div>
+          <div class="admin-table-wrap">
+            <table class="admin-table" id="validation-table">
+              <thead><tr><th>Time</th><th>Key</th><th>Package</th><th>IP</th><th>OK</th><th>Reason</th></tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <section id="view-audit" class="admin-view" hidden>
+        <div class="admin-panel-card admin-table-wrap">
+          <table class="admin-table" id="audit-table">
+            <thead><tr><th>Time</th><th>Admin</th><th>Action</th><th>Target</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
   </div>
 
   <script>window.STORE_REPO_PREFIX = "..";</script>

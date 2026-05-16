@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import { config } from "../config.js";
 import { pool } from "../db.js";
+import { normalizeEscrowIgnore, normalizeProtectionMode } from "./protection/escrow.js";
 
 let cache = { list: null, at: 0 };
 const CACHE_MS = 3000;
@@ -27,7 +28,9 @@ function normalizePackageBody(raw, fallbackId) {
     gallery: Array.isArray(p.gallery) ? p.gallery : [],
     cardImage: String(p.cardImage || "").trim(),
     detailIntro: String(p.detailIntro || "").trim(),
-    detailSections: Array.isArray(p.detailSections) ? p.detailSections : []
+    detailSections: Array.isArray(p.detailSections) ? p.detailSections : [],
+    protectionMode: normalizeProtectionMode(p.protectionMode || p.protection_mode),
+    escrowIgnore: normalizeEscrowIgnore(p.escrowIgnore || p.escrow_ignore)
   };
 }
 

@@ -8,6 +8,8 @@ import { downloadsRouter } from "./routes/downloads.js";
 import { ordersRouter } from "./routes/orders.js";
 import { packagesRouter } from "./routes/packages.js";
 import { adminRouter } from "./routes/admin.js";
+import { adminUploadsRouter } from "./routes/adminUploads.js";
+import { adminLicensesRouter } from "./routes/adminLicenses.js";
 import { seedAdminsFromEnv } from "./lib/adminSeed.js";
 import { seedPackagesFromJsonIfEmpty } from "./lib/packages.js";
 import { logAdminStartupDiagnostics } from "./lib/adminAuthLog.js";
@@ -47,6 +49,8 @@ app.use("/api/licenses", licensesRouter);
 app.use("/api/downloads", downloadsRouter);
 app.use("/api/orders", ordersRouter);
 app.use("/api/admin", adminRouter);
+app.use("/api/admin/uploads", adminUploadsRouter);
+app.use("/api/admin/licenses", adminLicensesRouter);
 
 app.use((err, req, res, _next) => {
   if (err.message === "Not allowed by CORS") {
