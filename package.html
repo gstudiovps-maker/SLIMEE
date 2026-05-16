@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Redirecting…</title>
+  <script>
+    location.replace("package/" + (window.location.search || ""));
+  </script>
+</head>
+<body>
+  <p><a id="link" href="package/">Continue →</a></p>
+  <script>
+    document.getElementById("link").href = "package/" + (window.location.search || "");
+  </script>
+</body>
+</html>
