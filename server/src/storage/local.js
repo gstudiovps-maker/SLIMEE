@@ -38,4 +38,16 @@ export class LocalStorageProvider {
       await fs.promises.unlink(filePath);
     }
   }
+
+  async getObject(storageKey) {
+    return this.readBuffer(storageKey);
+  }
+
+  async uploadBuffer(storageKey, buffer) {
+    return this.saveFromBuffer(storageKey, buffer);
+  }
+
+  async deleteObject(storageKey) {
+    return this.delete(storageKey);
+  }
 }

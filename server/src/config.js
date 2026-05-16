@@ -17,7 +17,9 @@ export const config = {
   stripeSecretKey: process.env.STRIPE_SECRET_KEY || "",
   stripeWebhookSecret: process.env.STRIPE_WEBHOOK_SECRET || "",
   frontendUrl: (process.env.FRONTEND_URL || "http://localhost:5500").replace(/\/$/, ""),
-  apiPublicUrl: (process.env.API_PUBLIC_URL || `http://localhost:${process.env.PORT || 3001}`).replace(/\/$/, ""),
+  apiPublicUrl: (process.env.API_PUBLIC_URL || `http://localhost:${process.env.PORT || 3001}`)
+    .replace(/\/+$/, "")
+    .replace(/\/api$/i, ""),
   corsOrigins: (process.env.CORS_ORIGINS || process.env.FRONTEND_URL || "http://localhost:5500")
     .split(",")
     .map((s) => s.trim())

@@ -129,4 +129,4 @@ See `examples/fivem-license-validate/` — call validate from **server-side** Lu
 
 - HWID / hardware binding  
 - Custom launcher  
-- Encryption / R2 (use local `downloads/` for now; add R2 presigned URLs later)  
+- Customer downloads still stream via the API (protected builds); R2 stores admin source ZIPs with presigned URLs available via `createSignedDownloadUrl()` when needed  

@@ -43,7 +43,7 @@
 
         <p id="download-status" class="download-status" role="status" aria-live="polite"></p>
         <p id="download-hint" class="download-hint" hidden>
-          <a id="download-file-link" class="button button-primary" href="#" download>Download ZIP</a>
+          <button type="button" id="download-file-btn" class="button button-primary">Download ZIP</button>
         </p>
       </section>
     </main>
@@ -61,8 +61,30 @@
       const form = document.getElementById("download-form");
       const statusEl = document.getElementById("download-status");
       const hintEl = document.getElementById("download-hint");
-      const fileLink = document.getElementById("download-file-link");
+      const fileBtn = document.getElementById("download-file-btn");
       const base = (window.STORE_CONFIG?.apiBaseUrl || "").replace(/\/$/, "");
+      let activeDownloadUrl = "";
+      let activePackageId = "";
+
+      const ERROR_MESSAGES = {
+        token_not_found: "Download link is invalid. Request a new link below.",
+        token_expired: "This download link has expired. Request a new link below.",
+        package_missing: "The package file is not available yet. Contact support or try again later.",
+        storage_unavailable: "Storage is temporarily unavailable. Try again in a few minutes.",
+        license_inactive: "Your license is not active. Contact support.",
+        license_invalid: "License key not recognized.",
+        download_failed: "Download failed. Try again or request a new link."
+      };
+
+      function formatDownloadError(data, status) {
+        if (data?.code && ERROR_MESSAGES[data.code]) {
+          return ERROR_MESSAGES[data.code];
+        }
+        if (status === 410) return ERROR_MESSAGES.token_expired;
+        if (status === 404) return ERROR_MESSAGES.package_missing;
+        if (status === 503) return ERROR_MESSAGES.storage_unavailable;
+        return data?.error || ERROR_MESSAGES.download_failed;
+      }
 
       if (params.get("licenseKey")) licenseInput.value = params.get("licenseKey");
       if (params.get("packageId")) packageInput.value = params.get("packageId");
@@ -104,11 +126,49 @@
           }
 
           statusEl.textContent = "License valid. Your download link is ready (expires in 10 minutes).";
-          fileLink.href = data.downloadUrl;
-          fileLink.textContent = `Download ${packageId}.zip`;
+          activeDownloadUrl = data.downloadUrl;
+          activePackageId = packageId;
+          fileBtn.textContent = `Download ${packageId}.zip`;
           hintEl.hidden = false;
         } catch {
           statusEl.textContent = "Could not reach the download API.";
+        }
+      });
+
+      fileBtn.addEventListener("click", async () => {
+        if (!activeDownloadUrl) return;
+        fileBtn.disabled = true;
+        const prevLabel = fileBtn.textContent;
+        fileBtn.textContent = "Preparing download…";
+        statusEl.textContent = "Building your protected package…";
+
+        try {
+          const res = await fetch(activeDownloadUrl, { method: "GET" });
+          const contentType = res.headers.get("content-type") || "";
+
+          if (!res.ok) {
+            const data = contentType.includes("application/json")
+              ? await res.json().catch(() => ({}))
+              : {};
+            statusEl.textContent = formatDownloadError(data, res.status);
+            return;
+          }
+
+          const blob = await res.blob();
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = `${activePackageId || "package"}-protected.zip`;
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          URL.revokeObjectURL(url);
+          statusEl.textContent = "Download started. Check your downloads folder.";
+        } catch {
+          statusEl.textContent = "Could not download the file. Check your connection and try again.";
+        } finally {
+          fileBtn.disabled = false;
+          fileBtn.textContent = prevLabel;
         }
       });
     })();

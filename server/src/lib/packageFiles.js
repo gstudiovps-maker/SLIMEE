@@ -53,8 +53,12 @@ export async function deletePackageSourceFile(packageId) {
 
 export async function readPackageSourceBuffer(packageId) {
   const row = await getPackageSourceFile(packageId);
-  if (!row) {
+  if (!row?.storage_key) {
     return null;
   }
-  return getStorage().readBuffer(row.storage_key);
+  const storage = getStorage();
+  if (typeof storage.getObject === "function") {
+    return storage.getObject(row.storage_key);
+  }
+  return storage.readBuffer(row.storage_key);
 }

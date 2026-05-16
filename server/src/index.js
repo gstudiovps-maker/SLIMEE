@@ -77,5 +77,8 @@ async function bootstrap() {
 app.listen(config.port, () => {
   console.log(`Slimee API listening on port ${config.port}`);
   console.log(`Frontend URL: ${config.frontendUrl}`);
+  console.log(`API public URL: ${config.apiPublicUrl}`);
+  console.log(`Storage provider: ${config.storageProvider}`);
+  console.log("[downloads] routes: POST /api/downloads/request, GET /api/downloads/file/:token");
   bootstrap();
 });

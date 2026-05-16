@@ -9,6 +9,7 @@ import {
   deletePackageById
 } from "../lib/packages.js";
 import { deletePackageSourceFile } from "../lib/packageFiles.js";
+import { checkPackageStorage } from "../lib/packageStorage.js";
 import { requireAdmin, requireMainAdmin } from "../middleware/adminAuth.js";
 import {
   countAdminUsers,
@@ -377,6 +378,24 @@ adminRouter.delete("/packages/:id", requireAdmin, async (req, res) => {
   } catch (err) {
     console.error("[admin package delete]", err);
     return res.status(500).json({ error: "Could not delete package" });
+  }
+});
+
+adminRouter.get("/storage/check/:packageId", requireAdmin, async (req, res) => {
+  try {
+    const packageId = String(req.params.packageId || "").trim();
+    if (!packageId) {
+      return res.status(400).json({ error: "packageId is required" });
+    }
+    const report = await checkPackageStorage(packageId);
+    return res.json({
+      ok: report.objectExists,
+      ...report,
+      note: "signedUrl is for admin diagnostics only — customer downloads use token-protected API routes"
+    });
+  } catch (err) {
+    console.error("[admin storage check]", err);
+    return res.status(500).json({ error: err.message || "Storage check failed" });
   }
 });
 
