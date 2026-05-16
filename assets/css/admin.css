@@ -84,7 +84,7 @@ body.page-admin {
   border-radius: 999px;
   font-size: 0.82rem;
   font-weight: 700;
-  color: var(--tebex-blue);
+  color: var(--accent, #a1ff62);
   background: rgba(59, 130, 246, 0.12);
   border: 1px solid rgba(96, 165, 250, 0.25);
 }

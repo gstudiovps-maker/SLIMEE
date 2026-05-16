@@ -13,6 +13,7 @@
   <link rel="stylesheet" href="../assets/css/admin-dashboard.css">
 </head>
 <body class="page-admin page-admin-dashboard">
+  <div id="admin-login-screen" class="admin-login-screen">
   <section id="admin-login" class="admin-login-card">
     <h1>Product Manager</h1>
     <p>Protected Package Delivery — sign in with your Render admin account.</p>
@@ -26,9 +27,10 @@
         <span>Password</span>
         <input id="admin-password" type="password" autocomplete="current-password" required />
       </label>
-      <button type="submit" class="tebex-btn-primary" style="width:100%">Sign in</button>
+      <button type="submit" class="admin-btn-primary" style="width:100%">Sign in</button>
     </form>
   </section>
+  </div>
 
   <div id="admin-app" class="admin-app" hidden>
     <aside class="admin-sidebar">
@@ -45,14 +47,13 @@
       </nav>
       <div style="margin-top:auto;padding:0.5rem">
         <span id="admin-user-pill" class="admin-user-pill"></span>
-        <button type="button" class="tebex-btn-ghost" id="admin-logout" style="width:100%;margin-top:0.5rem">Log out</button>
+        <button type="button" class="admin-btn-ghost" id="admin-logout" style="width:100%;margin-top:0.5rem">Log out</button>
       </div>
     </aside>
 
     <main class="admin-main">
       <div class="admin-topbar">
         <h1 id="admin-view-title">Dashboard</h1>
-        <button type="button" class="tebex-btn-primary" id="admin-new-package" hidden>New product</button>
       </div>
       <p id="admin-panel-msg" class="admin-msg" hidden role="status"></p>
 
@@ -72,11 +73,21 @@
       </section>
 
       <section id="view-products" class="admin-view" hidden>
+        <div class="admin-products-toolbar">
+          <button type="button" class="admin-btn-primary" id="btn-product-create">Create</button>
+          <button type="button" class="admin-btn-secondary" id="btn-product-edit" disabled>Edit</button>
+          <button type="button" class="admin-btn-danger" id="btn-product-delete" disabled>Delete</button>
+          <span id="products-selection-hint" class="admin-selection-hint">Select a product, or click Create.</span>
+        </div>
         <div id="admin-product-grid" class="admin-product-grid"></div>
         <div id="admin-editor-wrap" class="admin-editor-layout" hidden>
           <form id="admin-editor-form" class="admin-panel-card">
-            <h2 style="margin:0 0 1rem">Edit product</h2>
-            <label class="admin-field"><span>Package ID</span><input id="pkg-id" required pattern="[a-zA-Z0-9][a-zA-Z0-9-]*" /></label>
+            <h2 id="admin-editor-title" style="margin:0 0 1rem">Product options</h2>
+            <label class="admin-field">
+              <span>Package ID</span>
+              <input id="pkg-id" readonly />
+              <small class="admin-field-hint">Auto-generated when you create a product.</small>
+            </label>
             <label class="admin-field"><span>Name</span><input id="pkg-name" required /></label>
             <label class="admin-field"><span>Category</span>
               <select id="pkg-category"><option>Scripts</option><option>Maps</option><option>MLO</option><option>Clothing</option><option>Weapons</option></select>
@@ -99,8 +110,8 @@
             <label class="admin-field" style="flex-direction:row;align-items:center;gap:0.5rem"><input id="pkg-featured" type="checkbox" /><span>Featured</span></label>
             <label class="admin-field" style="flex-direction:row;align-items:center;gap:0.5rem"><input id="pkg-published" type="checkbox" checked /><span>Published</span></label>
             <div class="admin-editor-actions">
-              <button type="submit" class="tebex-btn-primary">Save product</button>
-              <button type="button" class="tebex-btn-ghost" id="admin-delete-package" style="width:auto;margin:0">Delete</button>
+              <button type="submit" class="admin-btn-primary">Save product</button>
+              <button type="button" class="admin-btn-ghost" id="admin-editor-cancel" style="width:auto;margin:0">Cancel</button>
             </div>
           </form>
           <div class="admin-panel-card">
@@ -108,7 +119,7 @@
             <p style="margin:0 0 0.75rem;color:var(--muted);font-size:0.82rem">Upload goes to Render private storage only — never GitHub.</p>
             <div class="admin-dropzone" id="admin-dropzone">
               <p><strong>Drag & drop</strong> development .zip here</p>
-              <p>or <label style="color:#60a5fa;cursor:pointer">browse<input type="file" id="pkg-zip-input" accept=".zip,application/zip" /></label></p>
+              <p>or <label class="admin-browse-link">browse<input type="file" id="pkg-zip-input" accept=".zip,application/zip" /></label></p>
               <p id="pkg-upload-status" style="margin-top:0.75rem;font-size:0.8rem"></p>
             </div>
           </div>
@@ -120,7 +131,7 @@
           <label class="admin-field"><span>Search licenses / email / package</span>
             <input id="license-search" placeholder="SLIMEE-... or email" />
           </label>
-          <button type="button" class="tebex-btn-primary" id="license-search-btn">Search</button>
+          <button type="button" class="admin-btn-primary" id="license-search-btn">Search</button>
         </div>
         <div class="admin-table-wrap">
           <table class="admin-table" id="licenses-table">
@@ -135,8 +146,8 @@
       <section id="view-validation" class="admin-view" hidden>
         <div class="admin-panel-card">
           <div style="display:flex;gap:0.5rem;margin-bottom:0.75rem">
-            <button type="button" class="tebex-btn-ghost" id="validation-all-btn" style="width:auto;margin:0">All</button>
-            <button type="button" class="tebex-btn-primary" id="validation-failed-btn" style="width:auto;margin:0">Failed only</button>
+            <button type="button" class="admin-btn-ghost" id="validation-all-btn" style="width:auto;margin:0">All</button>
+            <button type="button" class="admin-btn-primary" id="validation-failed-btn" style="width:auto;margin:0">Failed only</button>
           </div>
           <div class="admin-table-wrap">
             <table class="admin-table" id="validation-table">
