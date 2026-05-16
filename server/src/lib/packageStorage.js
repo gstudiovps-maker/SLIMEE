@@ -30,6 +30,7 @@ export async function checkPackageStorage(packageId) {
       : null,
     storageKey,
     objectExists: false,
+    getObjectSuccess: false,
     signedUrl: null,
     signedUrlExpiresAt: null,
     signedUrlExpiresInSeconds: null
@@ -55,6 +56,26 @@ export async function checkPackageStorage(packageId) {
       error: err.message
     });
     return result;
+  }
+
+  if (result.objectExists && typeof storage.getObject === "function") {
+    try {
+      const probe = await storage.getObject(storageKey);
+      result.getObjectSuccess = Boolean(probe?.length);
+      logDownload("storage_check_getObject", {
+        packageId,
+        storageKey,
+        success: result.getObjectSuccess,
+        byteSize: probe?.length ?? 0
+      });
+    } catch (err) {
+      result.getObjectError = err.message;
+      logDownload("storage_check_getObject_fail", {
+        packageId,
+        storageKey,
+        error: err.message
+      });
+    }
   }
 
   if (result.objectExists && typeof storage.createSignedDownloadUrl === "function") {
@@ -88,33 +109,68 @@ export async function checkPackageStorage(packageId) {
 
 export async function readSourceBufferByKey(storageKey, meta = {}) {
   const storage = getStorage();
-  logDownload("storage_read_start", { storageKey, ...meta });
+  const provider = config.storageProvider;
+  logDownload("storage_read_start", { storageKey, provider, ...meta });
 
   let exists = false;
   try {
     exists = await storage.exists(storageKey);
   } catch (err) {
-    logDownload("storage_exists_error", { storageKey, error: err.message, ...meta });
+    logDownload("r2_exists_fail", { storageKey, provider, error: err.message, ...meta });
     throw err;
   }
 
-  logDownload("storage_object_exists", { storageKey, exists, ...meta });
+  logDownload("storage_object_exists", { storageKey, exists, provider, ...meta });
 
   if (!exists) {
-    return { buffer: null, exists: false };
+    logDownload("r2_getObject_skip", { storageKey, reason: "object_missing", success: false, ...meta });
+    return { buffer: null, exists: false, getObjectSuccess: false };
   }
 
-  const buffer = await storage.getObject(storageKey);
+  let buffer = null;
+  let getObjectSuccess = false;
+  let getObjectError = null;
+
+  try {
+    if (typeof storage.getObject === "function") {
+      buffer = await storage.getObject(storageKey);
+    } else if (typeof storage.readBuffer === "function") {
+      buffer = await storage.readBuffer(storageKey);
+    }
+    getObjectSuccess = Boolean(buffer?.length);
+    logDownload("r2_getObject_success", {
+      storageKey,
+      provider,
+      success: getObjectSuccess,
+      byteSize: buffer?.length ?? 0,
+      ...meta
+    });
+  } catch (err) {
+    getObjectError = err.message;
+    logDownload("r2_getObject_fail", {
+      storageKey,
+      provider,
+      success: false,
+      error: err.message,
+      ...meta
+    });
+    throw err;
+  }
+
   if (!buffer && typeof storage.readBuffer === "function") {
-    const legacy = await storage.readBuffer(storageKey);
-    return { buffer: legacy, exists: Boolean(legacy) };
+    buffer = await storage.readBuffer(storageKey);
+    getObjectSuccess = Boolean(buffer?.length);
+    logDownload("storage_read_fallback", {
+      storageKey,
+      success: getObjectSuccess,
+      byteSize: buffer?.length ?? 0,
+      ...meta
+    });
   }
 
-  logDownload("storage_read_ok", {
-    storageKey,
-    byteSize: buffer?.length ?? 0,
-    ...meta
-  });
+  if (!getObjectSuccess) {
+    logDownload("r2_getObject_empty", { storageKey, provider, success: false, ...meta });
+  }
 
-  return { buffer, exists: Boolean(buffer) };
+  return { buffer, exists: Boolean(buffer), getObjectSuccess, getObjectError };
 }

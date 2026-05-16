@@ -1,17 +1,17 @@
 import express from "express";
 import { config } from "../config.js";
 import { findByLicenseKey } from "../lib/licenses.js";
-import { getPackageById } from "../lib/packages.js";
 import { getPackageSourceFile } from "../lib/packageFiles.js";
 import { buildProtectedPackage } from "../lib/protection/packager.js";
-import { logDownload } from "../lib/downloadLog.js";
+import { logDownload, logDownloadFile } from "../lib/downloadLog.js";
 import {
   createDownloadToken,
-  findDownloadToken,
   countDownloadTokensForLicense,
   DOWNLOAD_TOKEN_TTL_MS
 } from "../lib/downloadTokens.js";
-import { checkPackageStorage, readSourceBufferByKey, resolvePackageStorageKey } from "../lib/packageStorage.js";
+import { checkPackageStorage, readSourceBufferByKey } from "../lib/packageStorage.js";
+import { resolveDownloadContext } from "../lib/downloadResolve.js";
+import { getPackageById } from "../lib/packages.js";
 
 export const downloadsRouter = express.Router();
 
@@ -46,8 +46,60 @@ async function assertActiveLicense(licenseKey, packageId) {
 }
 
 /**
+ * GET /api/downloads/file/:token/status — lightweight JSON check (no ZIP build).
+ */
+downloadsRouter.get("/file/:token/status", async (req, res) => {
+  const rawToken = req.params.token;
+  logDownload("file_status_start", {
+    tokenReceived: Boolean(rawToken),
+    tokenPrefix: rawToken ? `${String(rawToken).slice(0, 8)}…` : null
+  });
+
+  const ctx = await resolveDownloadContext(rawToken);
+  const statusCode = ctx.ok ? 200 : ctx.status;
+
+  logDownloadFile("file_status_result", statusCode, {
+    tokenFound: ctx.tokenFound ?? false,
+    tokenValid: ctx.tokenValid ?? false,
+    packageId: ctx.packageId || null,
+    licenseId: ctx.licenseId || null,
+    sourceStorageKey: ctx.sourceStorageKey || null,
+    buildStorageKey: ctx.buildStorageKey || null,
+    storageObjectExists: ctx.storageObjectExists ?? null,
+    code: ctx.code || null
+  });
+
+  if (!ctx.ok) {
+    return res.status(statusCode).json({
+      ok: false,
+      error: ctx.error,
+      code: ctx.code,
+      tokenFound: ctx.tokenFound,
+      tokenValid: ctx.tokenValid,
+      packageId: ctx.packageId,
+      licenseId: ctx.licenseId,
+      sourceStorageKey: ctx.sourceStorageKey,
+      buildStorageKey: ctx.buildStorageKey,
+      expiresAt: ctx.expiresAt
+    });
+  }
+
+  return res.status(200).json({
+    ok: true,
+    code: "ready",
+    delivery: "stream",
+    packageId: ctx.packageId,
+    licenseId: ctx.licenseId,
+    sourceStorageKey: ctx.sourceStorageKey,
+    buildStorageKey: ctx.buildStorageKey,
+    storageObjectExists: ctx.storageObjectExists,
+    storageProvider: ctx.storageProvider,
+    expiresAt: ctx.expiresAt
+  });
+});
+
+/**
  * POST /api/downloads/request
- * Body: { licenseKey, packageId }
  */
 downloadsRouter.post("/request", async (req, res) => {
   try {
@@ -70,17 +122,12 @@ downloadsRouter.post("/request", async (req, res) => {
 
     const pkg = await getPackageById(packageId);
     if (!pkg) {
-      logDownload("request_package_missing", { packageId });
       return jsonError(res, 404, "package_missing", "Package not found");
     }
 
     const sourceRow = await getPackageSourceFile(packageId);
     const storageKey = sourceRow?.storage_key || null;
-    logDownload("request_storage_key", {
-      packageId,
-      storageKey: storageKey || null,
-      hasDbRow: Boolean(sourceRow)
-    });
+    logDownload("request_storage_key", { packageId, storageKey, hasDbRow: Boolean(sourceRow) });
 
     if (!storageKey) {
       return jsonError(res, 404, "package_missing", "Protected source package not uploaded yet", {
@@ -88,16 +135,14 @@ downloadsRouter.post("/request", async (req, res) => {
       });
     }
 
-    const { buffer: source, exists } = await readSourceBufferByKey(storageKey, {
+    const { buffer: source, exists, getObjectSuccess } = await readSourceBufferByKey(storageKey, {
       packageId,
       phase: "request"
     });
 
-    if (!exists || !source) {
-      logDownload("request_storage_missing", { packageId, storageKey });
-      return jsonError(res, 503, "storage_unavailable", "Package source file is missing from storage", {
-        storageKey
-      });
+    if (!exists || !source || !getObjectSuccess) {
+      logDownload("request_storage_missing", { packageId, storageKey, getObjectSuccess });
+      return jsonError(res, 503, "storage_unavailable", "Package source file is missing from storage");
     }
 
     const tokenRow = await createDownloadToken({
@@ -106,26 +151,26 @@ downloadsRouter.post("/request", async (req, res) => {
       storageKey
     });
 
-    const tokenCount = await countDownloadTokensForLicense(check.license.id);
     const expiresAt = new Date(tokenRow.expires_at);
+    const downloadUrl = `${config.apiPublicUrl}/api/downloads/file/${tokenRow.token}`;
+    const statusUrl = `${config.apiPublicUrl}/api/downloads/file/${tokenRow.token}/status`;
 
     logDownload("request_token_created", {
       packageId,
+      licenseId: check.license.id,
       storageKey,
-      tokenId: tokenRow.id,
       tokenPrefix: `${tokenRow.token.slice(0, 8)}…`,
-      expiresAt: expiresAt.toISOString(),
-      licenseTokenCount: tokenCount
+      expiresAt: expiresAt.toISOString()
     });
-
-    const downloadUrl = `${config.apiPublicUrl}/api/downloads/file/${tokenRow.token}`;
 
     return res.json({
       downloadUrl,
+      statusUrl,
       expiresAt: expiresAt.toISOString(),
       expiresInSeconds: Math.floor(DOWNLOAD_TOKEN_TTL_MS / 1000),
       packageId,
-      delivery: "Protected Package Delivery"
+      delivery: "stream",
+      clientDownloadMode: "navigate"
     });
   } catch (err) {
     logDownload("request_error", { error: err.message, stack: err.stack });
@@ -139,90 +184,104 @@ downloadsRouter.post("/request", async (req, res) => {
  */
 downloadsRouter.get("/file/:token", async (req, res) => {
   const rawToken = req.params.token;
+  const tokenPrefix = rawToken ? `${String(rawToken).slice(0, 8)}…` : null;
+
   logDownload("file_start", {
     tokenReceived: Boolean(rawToken),
-    tokenPrefix: rawToken ? `${String(rawToken).slice(0, 8)}…` : null,
-    method: req.method,
-    path: req.path
+    tokenPrefix,
+    origin: req.headers.origin || null,
+    accept: req.headers.accept || null
   });
 
+  const respondError = (status, code, message, fields = {}) => {
+    logDownloadFile("file_response", status, {
+      tokenPrefix,
+      tokenFound: fields.tokenFound ?? null,
+      tokenValid: fields.tokenValid ?? null,
+      packageId: fields.packageId ?? null,
+      licenseId: fields.licenseId ?? null,
+      sourceStorageKey: fields.sourceStorageKey ?? null,
+      buildStorageKey: fields.buildStorageKey ?? null,
+      r2GetObjectSuccess: fields.r2GetObjectSuccess ?? null,
+      code
+    });
+    return jsonError(res, status, code, message, fields);
+  };
+
   try {
-    const token = String(rawToken || "").trim();
-    if (!token) {
-      return jsonError(res, 400, "token_missing", "Download token is required");
-    }
+    const ctx = await resolveDownloadContext(rawToken);
 
-    const row = await findDownloadToken(token);
-    if (!row) {
-      logDownload("file_token_not_found", { tokenPrefix: `${token.slice(0, 8)}…` });
-      return jsonError(res, 404, "token_not_found", "Download link invalid or unknown");
-    }
-
-    logDownload("file_token_found", {
-      tokenPrefix: `${token.slice(0, 8)}…`,
-      downloadTokenId: row.download_token_id,
-      licenseId: row.license_row_id,
-      packageId: row.package_id,
-      storageKey: row.storage_key || null,
-      expiresAt: new Date(row.expires_at).toISOString()
+    logDownload("file_token_lookup", {
+      tokenPrefix,
+      tokenFound: ctx.tokenFound ?? false,
+      tokenValid: ctx.tokenValid ?? false,
+      packageId: ctx.packageId || null,
+      licenseId: ctx.licenseId || null,
+      sourceStorageKey: ctx.sourceStorageKey || null,
+      buildStorageKey: ctx.buildStorageKey || null,
+      expiresAt: ctx.expiresAt || null
     });
 
-    const expiresAt = new Date(row.expires_at);
-    if (expiresAt < new Date()) {
-      logDownload("file_token_expired", {
-        tokenPrefix: `${token.slice(0, 8)}…`,
-        expiresAt: expiresAt.toISOString()
+    if (!ctx.ok) {
+      return respondError(ctx.status, ctx.code, ctx.error, {
+        tokenFound: ctx.tokenFound,
+        tokenValid: ctx.tokenValid,
+        packageId: ctx.packageId,
+        licenseId: ctx.licenseId,
+        sourceStorageKey: ctx.sourceStorageKey,
+        buildStorageKey: ctx.buildStorageKey
       });
-      return jsonError(res, 410, "token_expired", "Download link expired", {
-        expiresAt: expiresAt.toISOString()
-      });
     }
 
-    if (row.license_status !== "active") {
-      logDownload("file_license_inactive", {
-        tokenPrefix: `${token.slice(0, 8)}…`,
-        status: row.license_status
-      });
-      return jsonError(res, 403, "license_inactive", "License inactive");
-    }
-
-    const packageId = row.package_id || row.token_package_id;
-    const storageKey = await resolvePackageStorageKey(packageId, row.storage_key);
-
-    logDownload("file_storage_key_resolved", {
-      packageId,
-      storageKey: storageKey || null,
-      fromToken: Boolean(row.storage_key)
-    });
-
-    if (!storageKey) {
-      return jsonError(res, 404, "package_missing", "No source package is registered for this product");
-    }
-
-    const pkg = await getPackageById(packageId);
-    if (!pkg) {
-      logDownload("file_package_catalog_missing", { packageId });
-      return jsonError(res, 404, "package_missing", "Package not found in catalog");
-    }
+    const { token, packageId, licenseId, sourceStorageKey, buildStorageKey, row, pkg } = ctx;
 
     let source;
+    let r2GetObjectSuccess = false;
     try {
-      const readResult = await readSourceBufferByKey(storageKey, {
+      const readResult = await readSourceBufferByKey(sourceStorageKey, {
         packageId,
         phase: "file",
-        tokenPrefix: `${token.slice(0, 8)}…`
+        tokenPrefix,
+        buildStorageKey
       });
       source = readResult.buffer;
+      r2GetObjectSuccess = readResult.getObjectSuccess;
 
-      if (!readResult.exists || !source) {
-        logDownload("file_storage_missing", { packageId, storageKey });
-        return jsonError(res, 404, "package_missing", "Package source file is not available in storage", {
-          storageKey
+      logDownload("file_r2_read", {
+        tokenPrefix,
+        sourceStorageKey,
+        buildStorageKey,
+        r2GetObjectSuccess,
+        byteSize: source?.length ?? 0
+      });
+
+      if (!readResult.exists || !source || !r2GetObjectSuccess) {
+        return respondError(404, "package_missing", "Package source file is not available in storage", {
+          tokenFound: true,
+          tokenValid: true,
+          packageId,
+          licenseId,
+          sourceStorageKey,
+          buildStorageKey,
+          r2GetObjectSuccess: false
         });
       }
     } catch (err) {
-      logDownload("file_storage_error", { packageId, storageKey, error: err.message });
-      return jsonError(res, 503, "storage_unavailable", "Could not read package from storage");
+      logDownload("file_storage_error", {
+        tokenPrefix,
+        sourceStorageKey,
+        error: err.message,
+        r2GetObjectSuccess: false
+      });
+      return respondError(503, "storage_unavailable", `Could not read package from storage: ${err.message}`, {
+        tokenFound: true,
+        tokenValid: true,
+        packageId,
+        licenseId,
+        sourceStorageKey,
+        buildStorageKey,
+        r2GetObjectSuccess: false
+      });
     }
 
     const licenseRow = {
@@ -231,25 +290,50 @@ downloadsRouter.get("/file/:token", async (req, res) => {
       customer_email: row.customer_email
     };
 
-    const protectedZip = buildProtectedPackage(source, pkg, licenseRow);
+    let protectedZip;
+    try {
+      protectedZip = buildProtectedPackage(source, pkg, licenseRow);
+    } catch (err) {
+      logDownload("file_build_error", { tokenPrefix, error: err.message });
+      return respondError(500, "build_failed", `Protected build failed: ${err.message}`, {
+        tokenFound: true,
+        tokenValid: true,
+        packageId,
+        licenseId,
+        sourceStorageKey,
+        buildStorageKey,
+        r2GetObjectSuccess
+      });
+    }
+
     const filename = `${packageId}-${row.license_key.slice(0, 8)}-protected.zip`;
 
-    logDownload("file_stream_start", {
+    logDownloadFile("file_response", 200, {
+      tokenPrefix,
+      tokenFound: true,
+      tokenValid: true,
       packageId,
-      storageKey,
-      filename,
-      byteSize: protectedZip.length,
-      expiresAt: expiresAt.toISOString()
+      licenseId,
+      sourceStorageKey,
+      buildStorageKey,
+      r2GetObjectSuccess,
+      protectedByteSize: protectedZip.length,
+      filename
     });
 
     res.setHeader("Content-Type", "application/zip");
     res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
     res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
     res.setHeader("X-Content-Type-Options", "nosniff");
+    res.setHeader("Access-Control-Expose-Headers", "Content-Disposition, Content-Type");
     return res.send(protectedZip);
   } catch (err) {
-    logDownload("file_error", { error: err.message, stack: err.stack });
+    logDownloadFile("file_response", 500, {
+      tokenPrefix,
+      error: err.message,
+      code: "download_failed"
+    });
     console.error("[downloads/file]", err);
-    return jsonError(res, 500, "download_failed", "Download failed");
+    return jsonError(res, 500, "download_failed", `Download failed: ${err.message}`);
   }
 });

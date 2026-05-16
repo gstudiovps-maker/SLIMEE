@@ -20,10 +20,18 @@ export const config = {
   apiPublicUrl: (process.env.API_PUBLIC_URL || `http://localhost:${process.env.PORT || 3001}`)
     .replace(/\/+$/, "")
     .replace(/\/api$/i, ""),
-  corsOrigins: (process.env.CORS_ORIGINS || process.env.FRONTEND_URL || "http://localhost:5500")
-    .split(",")
-    .map((s) => s.trim())
-    .filter(Boolean),
+  corsOrigins: [
+    ...new Set(
+      [
+        ...(process.env.CORS_ORIGINS || "").split(","),
+        process.env.FRONTEND_URL || "",
+        "http://localhost:5500",
+        "http://127.0.0.1:5500"
+      ]
+        .map((s) => s.trim().replace(/\/$/, ""))
+        .filter(Boolean)
+    )
+  ],
   packagesJson: path.resolve(
     serverRoot,
     process.env.PACKAGES_JSON || "../content/packages.json"

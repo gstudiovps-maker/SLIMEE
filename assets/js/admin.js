@@ -364,6 +364,59 @@
     if (productGrid && !productGrid.hidden) renderProductGrid();
   }
 
+  async function checkStorageFile() {
+    const packageId = selectedId || document.getElementById("pkg-id")?.value?.trim();
+    if (!packageId) {
+      showMsg(panelMsg, "Select or save a product first.", "error");
+      return;
+    }
+    const status = document.getElementById("pkg-upload-status");
+    if (status) {
+      status.textContent = "Checking storage…";
+      status.style.color = "";
+    }
+    try {
+      const data = await api(`/storage/check/${encodeURIComponent(packageId)}`);
+      const key = data.storageKey || data.dbRecord?.storageKey || "—";
+      const provider = data.storageProvider || "storage";
+      if (data.objectExists && data.getObjectSuccess !== false) {
+        const sizeKb = Math.round((data.dbRecord?.byteSize || 0) / 1024);
+        const msg = `Storage OK (${provider}): ${key} — ${sizeKb} KB`;
+        if (status) {
+          status.textContent = msg;
+          status.style.color = "#86efac";
+        }
+        showMsg(panelMsg, msg, "success");
+      } else if (data.objectExists) {
+        const msg = `File exists but could not be read from ${provider}. Key: ${key}`;
+        if (status) {
+          status.textContent = msg;
+          status.style.color = "#fca5a5";
+        }
+        showMsg(panelMsg, msg, "error");
+      } else {
+        const msg = data.dbRecord
+          ? `Missing in ${provider}: ${key}`
+          : `No upload record for "${packageId}". Upload a ZIP first.`;
+        if (status) {
+          status.textContent = msg;
+          status.style.color = "#fca5a5";
+        }
+        showMsg(panelMsg, msg, "error");
+      }
+    } catch (err) {
+      if (status) {
+        status.textContent = err.message;
+        status.style.color = "#fca5a5";
+      }
+      showMsg(panelMsg, err.message, "error");
+    }
+  }
+
+  document.getElementById("btn-check-storage")?.addEventListener("click", () => {
+    checkStorageFile().catch((err) => showMsg(panelMsg, err.message, "error"));
+  });
+
   async function refreshUploadStatus() {
     const el = document.getElementById("pkg-upload-status");
     if (!selectedId) {

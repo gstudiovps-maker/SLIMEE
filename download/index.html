@@ -64,26 +64,28 @@
       const fileBtn = document.getElementById("download-file-btn");
       const base = (window.STORE_CONFIG?.apiBaseUrl || "").replace(/\/$/, "");
       let activeDownloadUrl = "";
+      let activeStatusUrl = "";
       let activePackageId = "";
 
-      const ERROR_MESSAGES = {
-        token_not_found: "Download link is invalid. Request a new link below.",
-        token_expired: "This download link has expired. Request a new link below.",
-        package_missing: "The package file is not available yet. Contact support or try again later.",
-        storage_unavailable: "Storage is temporarily unavailable. Try again in a few minutes.",
-        license_inactive: "Your license is not active. Contact support.",
-        license_invalid: "License key not recognized.",
-        download_failed: "Download failed. Try again or request a new link."
-      };
-
       function formatDownloadError(data, status) {
-        if (data?.code && ERROR_MESSAGES[data.code]) {
-          return ERROR_MESSAGES[data.code];
+        if (data?.error) return data.error;
+        if (status === 410) return "This download link has expired. Request a new link below.";
+        if (status === 404) return "The package file is not available yet. Contact support.";
+        if (status === 503) return "Storage is temporarily unavailable. Try again in a few minutes.";
+        return "Download failed. Try again or request a new link.";
+      }
+
+      function extractToken(downloadUrl) {
+        const match = String(downloadUrl || "").match(/\/file\/([a-f0-9]+)(?:\/|$)/i);
+        return match ? match[1] : "";
+      }
+
+      function isCrossOrigin(url) {
+        try {
+          return new URL(url).origin !== window.location.origin;
+        } catch {
+          return true;
         }
-        if (status === 410) return ERROR_MESSAGES.token_expired;
-        if (status === 404) return ERROR_MESSAGES.package_missing;
-        if (status === 503) return ERROR_MESSAGES.storage_unavailable;
-        return data?.error || ERROR_MESSAGES.download_failed;
       }
 
       if (params.get("licenseKey")) licenseInput.value = params.get("licenseKey");
@@ -127,6 +129,9 @@
 
           statusEl.textContent = "License valid. Your download link is ready (expires in 10 minutes).";
           activeDownloadUrl = data.downloadUrl;
+          activeStatusUrl =
+            data.statusUrl ||
+            `${base}/api/downloads/file/${extractToken(data.downloadUrl)}/status`;
           activePackageId = packageId;
           fileBtn.textContent = `Download ${packageId}.zip`;
           hintEl.hidden = false;
@@ -140,11 +145,42 @@
         fileBtn.disabled = true;
         const prevLabel = fileBtn.textContent;
         fileBtn.textContent = "Preparing download…";
-        statusEl.textContent = "Building your protected package…";
+        statusEl.textContent = "Checking download…";
 
         try {
+          const statusUrl =
+            activeStatusUrl ||
+            `${base}/api/downloads/file/${extractToken(activeDownloadUrl)}/status`;
+          const statusRes = await fetch(statusUrl, { method: "GET" });
+          const statusData = await statusRes.json().catch(() => ({}));
+
+          if (!statusRes.ok || !statusData.ok) {
+            statusEl.textContent = formatDownloadError(statusData, statusRes.status);
+            return;
+          }
+
+          if (statusData.delivery === "redirect" && statusData.redirectUrl) {
+            statusEl.textContent = "Redirecting to secure download…";
+            window.location.href = statusData.redirectUrl;
+            return;
+          }
+
+          statusEl.textContent = "Building your protected package… This may take a minute.";
+
+          if (isCrossOrigin(activeDownloadUrl)) {
+            window.location.href = activeDownloadUrl;
+            statusEl.textContent =
+              "Download started in your browser. If nothing saves, wait a moment and try again.";
+            return;
+          }
+
           const res = await fetch(activeDownloadUrl, { method: "GET" });
           const contentType = res.headers.get("content-type") || "";
+
+          if (res.redirected && res.url) {
+            window.location.href = res.url;
+            return;
+          }
 
           if (!res.ok) {
             const data = contentType.includes("application/json")
@@ -164,8 +200,9 @@
           a.remove();
           URL.revokeObjectURL(url);
           statusEl.textContent = "Download started. Check your downloads folder.";
-        } catch {
-          statusEl.textContent = "Could not download the file. Check your connection and try again.";
+        } catch (err) {
+          statusEl.textContent = `Download error: ${err.message || "Network error"}. Trying direct download…`;
+          window.location.href = activeDownloadUrl;
         } finally {
           fileBtn.disabled = false;
           fileBtn.textContent = prevLabel;

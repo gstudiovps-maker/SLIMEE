@@ -32,12 +32,14 @@ app.use(
         callback(null, true);
         return;
       }
-      if (!origin || config.corsOrigins.includes(origin)) {
+      const normalized = origin ? origin.replace(/\/$/, "") : "";
+      if (!origin || config.corsOrigins.includes(normalized)) {
         callback(null, true);
       } else {
         callback(new Error("Not allowed by CORS"));
       }
-    }
+    },
+    exposedHeaders: ["Content-Disposition", "Content-Type"]
   })
 );
 
@@ -79,6 +81,8 @@ app.listen(config.port, () => {
   console.log(`Frontend URL: ${config.frontendUrl}`);
   console.log(`API public URL: ${config.apiPublicUrl}`);
   console.log(`Storage provider: ${config.storageProvider}`);
-  console.log("[downloads] routes: POST /api/downloads/request, GET /api/downloads/file/:token");
+  console.log(
+    "[downloads] routes: POST /api/downloads/request, GET /api/downloads/file/:token/status, GET /api/downloads/file/:token"
+  );
   bootstrap();
 });

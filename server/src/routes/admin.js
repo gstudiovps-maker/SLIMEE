@@ -388,10 +388,13 @@ adminRouter.get("/storage/check/:packageId", requireAdmin, async (req, res) => {
       return res.status(400).json({ error: "packageId is required" });
     }
     const report = await checkPackageStorage(packageId);
+    const { signedUrl, ...safeReport } = report;
     return res.json({
-      ok: report.objectExists,
-      ...report,
-      note: "signedUrl is for admin diagnostics only — customer downloads use token-protected API routes"
+      ok: report.objectExists && report.getObjectSuccess !== false,
+      ...safeReport,
+      signedUrlGenerated: Boolean(signedUrl),
+      signedUrlHost: signedUrl ? new URL(signedUrl).host : null,
+      note: "Customer downloads use token-protected API routes — presigned URLs are never sent to the storefront"
     });
   } catch (err) {
     console.error("[admin storage check]", err);
