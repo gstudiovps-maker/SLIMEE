@@ -7,34 +7,43 @@
   min-height: 100vh;
 }
 
-.admin-login-screen {
+/* Default: login only — body.is-admin-authed toggled after successful sign-in */
+.page-admin-dashboard .admin-app {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+.page-admin-dashboard.is-admin-authed .admin-app {
+  display: grid !important;
+  visibility: visible !important;
+  pointer-events: auto !important;
+  grid-template-columns: 240px minmax(0, 1fr);
+  min-height: 100vh;
+}
+
+.page-admin-dashboard .admin-login-screen {
   position: fixed;
   inset: 0;
-  z-index: 300;
-  display: flex;
+  z-index: 9999;
+  display: flex !important;
   align-items: center;
   justify-content: center;
   padding: 1.25rem;
   background: #0b0f1a;
 }
 
-.admin-login-screen[hidden] {
+.page-admin-dashboard.is-admin-authed .admin-login-screen {
   display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
 }
 
 .admin-login-screen .admin-login-card {
   width: min(100%, 420px);
   margin: 0;
-}
-
-.admin-app[hidden] {
-  display: none !important;
-}
-
-.admin-app {
-  display: grid;
-  grid-template-columns: 240px minmax(0, 1fr);
-  min-height: 100vh;
+  position: relative;
+  z-index: 10000;
 }
 
 .admin-sidebar {
@@ -87,6 +96,8 @@
 
 .admin-nav button.is-active {
   color: var(--admin-accent);
+  background: rgba(161, 255, 98, 0.18);
+  box-shadow: inset 0 0 0 1px rgba(161, 255, 98, 0.25);
 }
 
 .admin-main {
@@ -340,7 +351,7 @@
 }
 
 @media (max-width: 1000px) {
-  .admin-app {
+  .page-admin-dashboard.is-admin-authed .admin-app {
     grid-template-columns: 1fr;
   }
 

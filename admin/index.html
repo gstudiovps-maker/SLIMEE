@@ -11,6 +11,25 @@
   <link rel="stylesheet" href="../assets/css/styles.css">
   <link rel="stylesheet" href="../assets/css/admin.css">
   <link rel="stylesheet" href="../assets/css/admin-dashboard.css">
+  <style>
+    /* Hide dashboard until authenticated (runs before external CSS/JS) */
+    .page-admin-dashboard .admin-app {
+      display: none !important;
+      visibility: hidden !important;
+      pointer-events: none !important;
+    }
+    .page-admin-dashboard.is-admin-authed .admin-app {
+      display: grid !important;
+      visibility: visible !important;
+      pointer-events: auto !important;
+    }
+    .page-admin-dashboard .admin-login-screen {
+      display: flex !important;
+    }
+    .page-admin-dashboard.is-admin-authed .admin-login-screen {
+      display: none !important;
+    }
+  </style>
 </head>
 <body class="page-admin page-admin-dashboard">
   <div id="admin-login-screen" class="admin-login-screen">
@@ -32,7 +51,7 @@
   </section>
   </div>
 
-  <div id="admin-app" class="admin-app" hidden>
+  <div id="admin-app" class="admin-app" aria-hidden="true">
     <aside class="admin-sidebar">
       <div class="admin-brand">
         <strong>Slimee Manager</strong>
@@ -75,11 +94,11 @@
       <section id="view-products" class="admin-view" hidden>
         <div class="admin-products-toolbar">
           <button type="button" class="admin-btn-primary" id="btn-product-create">Create</button>
-          <button type="button" class="admin-btn-secondary" id="btn-product-edit" disabled>Edit</button>
-          <button type="button" class="admin-btn-danger" id="btn-product-delete" disabled>Delete</button>
-          <span id="products-selection-hint" class="admin-selection-hint">Select a product, or click Create.</span>
+          <button type="button" class="admin-btn-secondary" id="btn-product-edit">Edit</button>
+          <button type="button" class="admin-btn-danger" id="btn-product-delete">Delete</button>
+          <span id="products-selection-hint" class="admin-selection-hint">Click Create, Edit, or Delete to manage products.</span>
         </div>
-        <div id="admin-product-grid" class="admin-product-grid"></div>
+        <div id="admin-product-grid" class="admin-product-grid" hidden></div>
         <div id="admin-editor-wrap" class="admin-editor-layout" hidden>
           <form id="admin-editor-form" class="admin-panel-card">
             <h2 id="admin-editor-title" style="margin:0 0 1rem">Product options</h2>

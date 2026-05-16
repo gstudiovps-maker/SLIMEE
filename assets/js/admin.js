@@ -1,4 +1,6 @@
 (function () {
+  document.body.classList.remove("is-admin-authed");
+
   const TOKEN_KEY = "slimee_admin_token";
   const USER_KEY = "slimee_admin_user";
 
@@ -21,7 +23,10 @@
   let packages = [];
   let selectedId = null;
   let editorMode = null;
+  let productListMode = null;
   let currentView = "dashboard";
+
+  const productGrid = document.getElementById("admin-product-grid");
 
   function apiBase() {
     return (window.STORE_CONFIG?.apiBaseUrl || "").replace(/\/$/, "");
@@ -88,14 +93,25 @@
 
   function showLogin() {
     document.body.classList.remove("is-admin-authed");
-    if (loginScreen) loginScreen.hidden = false;
-    if (appView) appView.hidden = true;
+    if (appView) {
+      appView.setAttribute("aria-hidden", "true");
+    }
+    if (loginScreen) {
+      loginScreen.removeAttribute("hidden");
+      loginScreen.setAttribute("aria-hidden", "false");
+    }
   }
 
   function showApp() {
     document.body.classList.add("is-admin-authed");
-    if (loginScreen) loginScreen.hidden = true;
-    if (appView) appView.hidden = false;
+    if (loginScreen) {
+      loginScreen.setAttribute("hidden", "");
+      loginScreen.setAttribute("aria-hidden", "true");
+    }
+    if (appView) {
+      appView.removeAttribute("hidden");
+      appView.setAttribute("aria-hidden", "false");
+    }
     const user = getUser();
     if (userPill && user) {
       userPill.textContent = `${user.username} (${user.role})`;
@@ -127,9 +143,7 @@
 
     if (view === "dashboard" && isMainAdmin()) loadDashboard();
     if (view === "products") {
-      closeEditor();
-      renderProductGrid();
-      updateProductToolbar();
+      resetProductsView();
     }
     if (view === "licenses" && isMainAdmin()) searchLicenses();
     if (view === "validation" && isMainAdmin()) loadValidationEvents(false);
@@ -239,6 +253,29 @@
     if (editorWrap) editorWrap.hidden = true;
   }
 
+  function hideProductGrid() {
+    productListMode = null;
+    if (productGrid) productGrid.hidden = true;
+    updateProductToolbar();
+  }
+
+  function showProductGrid(mode) {
+    productListMode = mode;
+    selectedId = null;
+    closeEditor();
+    if (productGrid) productGrid.hidden = false;
+    renderProductGrid();
+    updateProductToolbar();
+  }
+
+  function resetProductsView() {
+    closeEditor();
+    productListMode = null;
+    selectedId = null;
+    if (productGrid) productGrid.hidden = true;
+    updateProductToolbar();
+  }
+
   function openEditor(mode, pkg) {
     editorMode = mode;
     fillEditor(pkg, mode);
@@ -252,13 +289,20 @@
 
   function updateProductToolbar() {
     const hasSelection = Boolean(selectedId);
-    if (btnEdit) btnEdit.disabled = !hasSelection;
-    if (btnDelete) btnDelete.disabled = !hasSelection;
-    if (selectionHint) {
-      const pkg = packages.find((p) => p.id === selectedId);
+    if (btnEdit) btnEdit.disabled = productListMode === "edit" && !hasSelection;
+    if (btnDelete) btnDelete.disabled = productListMode === "delete" && !hasSelection;
+    if (!selectionHint) return;
+    const pkg = packages.find((p) => p.id === selectedId);
+    if (productListMode === "edit") {
+      selectionHint.textContent = "Select a product to edit.";
+    } else if (productListMode === "delete") {
       selectionHint.textContent = pkg
-        ? `Selected: ${pkg.name}`
-        : "Select a product, or click Create.";
+        ? `Selected: ${pkg.name} — press Delete again to remove it.`
+        : "Select a product to delete.";
+    } else if (editorMode === "create") {
+      selectionHint.textContent = "Creating a new product.";
+    } else {
+      selectionHint.textContent = "Click Create, Edit, or Delete to manage products.";
     }
   }
 
@@ -284,8 +328,8 @@
   }
 
   function renderProductGrid() {
-    const grid = document.getElementById("admin-product-grid");
-    grid.innerHTML = packages
+    if (!productGrid || productGrid.hidden) return;
+    productGrid.innerHTML = packages
       .map(
         (p) => `
       <article class="admin-product-card${p.id === selectedId ? " is-active" : ""}" data-id="${p.id}">
@@ -295,12 +339,20 @@
       </article>`
       )
       .join("");
-    grid.querySelectorAll(".admin-product-card").forEach((card) => {
+    productGrid.querySelectorAll(".admin-product-card").forEach((card) => {
       card.addEventListener("click", () => {
         selectedId = card.dataset.id;
-        closeEditor();
         renderProductGrid();
         updateProductToolbar();
+        if (productListMode === "edit") {
+          const pkg = packages.find((p) => p.id === selectedId);
+          if (pkg) {
+            productListMode = null;
+            if (productGrid) productGrid.hidden = true;
+            openEditor("edit", pkg);
+            updateProductToolbar();
+          }
+        }
       });
     });
     updateProductToolbar();
@@ -309,7 +361,7 @@
   async function loadPackages() {
     const data = await api("/packages");
     packages = data.packages || [];
-    renderProductGrid();
+    if (productGrid && !productGrid.hidden) renderProductGrid();
   }
 
   async function refreshUploadStatus() {
@@ -406,11 +458,11 @@
   });
 
   document.getElementById("admin-editor-cancel")?.addEventListener("click", () => {
-    closeEditor();
-    updateProductToolbar();
+    resetProductsView();
   });
 
   btnCreate?.addEventListener("click", () => {
+    hideProductGrid();
     selectedId = null;
     openEditor("create", {
       name: "New Package",
@@ -424,26 +476,36 @@
       tags: [],
       detailSections: []
     });
-    renderProductGrid();
     updateProductToolbar();
   });
 
   btnEdit?.addEventListener("click", () => {
+    if (productListMode !== "edit") {
+      showProductGrid("edit");
+      return;
+    }
     if (!selectedId) return;
     const pkg = packages.find((p) => p.id === selectedId);
-    if (pkg) openEditor("edit", pkg);
+    if (pkg) {
+      productListMode = null;
+      if (productGrid) productGrid.hidden = true;
+      openEditor("edit", pkg);
+      updateProductToolbar();
+    }
   });
 
   btnDelete?.addEventListener("click", async () => {
+    if (productListMode !== "delete") {
+      showProductGrid("delete");
+      return;
+    }
     if (!selectedId) return;
     const pkg = packages.find((p) => p.id === selectedId);
     if (!confirm(`Delete "${pkg?.name || selectedId}"? This cannot be undone.`)) return;
     try {
       await api(`/packages/${encodeURIComponent(selectedId)}`, { method: "DELETE" });
-      selectedId = null;
-      closeEditor();
+      resetProductsView();
       await loadPackages();
-      updateProductToolbar();
       showMsg(panelMsg, "Product deleted.", "success");
     } catch (err) {
       showMsg(panelMsg, err.message, "error");
@@ -541,6 +603,8 @@
     showLogin();
   });
 
+  showLogin();
+
   if (getToken() && getUser()) {
     api("/me")
       .then(async () => {
@@ -552,7 +616,5 @@
         clearSession();
         showLogin();
       });
-  } else {
-    showLogin();
   }
 })();
