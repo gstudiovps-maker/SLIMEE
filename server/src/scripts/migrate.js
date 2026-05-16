@@ -12,10 +12,12 @@ async function main() {
     process.exit(1);
   }
 
-  const files = fs
-    .readdirSync(sqlDir)
-    .filter((f) => f.endsWith(".sql"))
-    .sort();
+  const allSql = fs.readdirSync(sqlDir).filter((f) => f.endsWith(".sql"));
+  const migrations = allSql.filter((f) => f.startsWith("migrate_")).sort();
+  const files = [
+    ...(allSql.includes("schema.sql") ? ["schema.sql"] : []),
+    ...migrations
+  ];
 
   for (const file of files) {
     const sql = fs.readFileSync(path.join(sqlDir, file), "utf8");
