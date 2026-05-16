@@ -1,0 +1,53 @@
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import dotenv from "dotenv";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const serverRoot = path.join(__dirname, "..");
+const repoRoot = path.join(serverRoot, "..");
+const dontAddEnv = path.join(repoRoot, "dont add", "server.env");
+
+dotenv.config({ path: path.join(serverRoot, ".env") });
+dotenv.config({ path: dontAddEnv });
+
+export const config = {
+  port: Number(process.env.PORT) || 3001,
+  nodeEnv: process.env.NODE_ENV || "development",
+  databaseUrl: process.env.DATABASE_URL || "",
+  stripeSecretKey: process.env.STRIPE_SECRET_KEY || "",
+  stripeWebhookSecret: process.env.STRIPE_WEBHOOK_SECRET || "",
+  frontendUrl: (process.env.FRONTEND_URL || "http://localhost:5500").replace(/\/$/, ""),
+  apiPublicUrl: (process.env.API_PUBLIC_URL || `http://localhost:${process.env.PORT || 3001}`).replace(/\/$/, ""),
+  corsOrigins: (process.env.CORS_ORIGINS || process.env.FRONTEND_URL || "http://localhost:5500")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean),
+  packagesJson: path.resolve(
+    serverRoot,
+    process.env.PACKAGES_JSON || "../content/packages.json"
+  ),
+  downloadsDir: path.resolve(
+    serverRoot,
+    process.env.DOWNLOADS_DIR || path.join(repoRoot, "dont add", "downloads")
+  ),
+  jwtSecret: process.env.JWT_SECRET || "",
+  jwtExpiresIn: process.env.JWT_EXPIRES_IN || "12h",
+  mainAdminUsername: (process.env.MAIN_ADMIN_USERNAME || "").trim().toLowerCase(),
+  mainAdminPasswordHash: process.env.MAIN_ADMIN_PASSWORD_HASH || "",
+  admin2Username: (process.env.ADMIN2_USERNAME || "").trim().toLowerCase(),
+  admin2PasswordHash: process.env.ADMIN2_PASSWORD_HASH || "",
+  admin3Username: (process.env.ADMIN3_USERNAME || "").trim().toLowerCase(),
+  admin3PasswordHash: process.env.ADMIN3_PASSWORD_HASH || "",
+  admin4Username: (process.env.ADMIN4_USERNAME || "").trim().toLowerCase(),
+  admin4PasswordHash: process.env.ADMIN4_PASSWORD_HASH || "",
+  adminSeedJson: process.env.ADMIN_SEED_JSON || ""
+};
+
+export function assertConfig() {
+  const missing = [];
+  if (!config.databaseUrl) missing.push("DATABASE_URL");
+  if (!config.stripeSecretKey) missing.push("STRIPE_SECRET_KEY");
+  if (missing.length && config.nodeEnv === "production") {
+    console.warn(`[config] Missing in production: ${missing.join(", ")}`);
+  }
+}
