@@ -6,7 +6,18 @@ function normalizeKey(licenseKey) {
 }
 
 function normalizeIp(ip) {
-  return String(ip || "").trim();
+  const raw = String(ip || "").trim();
+  if (!raw) return "";
+  if (raw.startsWith("::ffff:")) {
+    return raw.slice(7);
+  }
+  return raw;
+}
+
+export function getRequestClientIp(req) {
+  const forwarded = req.headers["x-forwarded-for"]?.toString().split(",")[0]?.trim();
+  const ip = forwarded || req.socket?.remoteAddress || "";
+  return normalizeIp(ip);
 }
 
 export async function logValidationEvent({
@@ -142,7 +153,13 @@ export async function validateLicenseForServer({
       success: true,
       reason: "bound_first_start"
     });
-    return { valid: true, reason: "bound_first_start", bound: true };
+    return {
+      valid: true,
+      reason: "bound_first_start",
+      bound: true,
+      boundServerIp: ip || row.bound_server_ip,
+      serverIp: ip || row.bound_server_ip
+    };
   }
 
   if (row.bound_server_ip && ip && row.bound_server_ip !== ip) {
@@ -198,7 +215,27 @@ export async function validateLicenseForServer({
     reason: "ok"
   });
 
-  return { valid: true, reason: "ok" };
+  return {
+    valid: true,
+    reason: "ok",
+    boundServerIp: row.bound_server_ip,
+    serverIp: ip || row.bound_server_ip
+  };
+}
+
+/**
+ * FiveM runtime activation — IP detected from HTTP request (no server.cfg).
+ */
+export async function activateLicenseFromRequest(req, { licenseKey, packageId, resourceName, buildId }) {
+  const serverIp = getRequestClientIp(req);
+  const result = await validateLicenseForServer({
+    licenseKey,
+    packageId,
+    resourceName: resourceName || "",
+    serverIp,
+    fivemLicenseId: ""
+  });
+  return { ...result, serverIp, buildId: buildId || null };
 }
 
 export async function searchLicenses({ q, limit = 50 } = {}) {

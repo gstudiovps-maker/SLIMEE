@@ -1,13 +1,52 @@
 import express from "express";
 import { validateLicense } from "../lib/licenses.js";
-import { validateLicenseForServer } from "../lib/licenseValidation.js";
+import {
+  validateLicenseForServer,
+  activateLicenseFromRequest,
+  getRequestClientIp
+} from "../lib/licenseValidation.js";
 
 export const licensesRouter = express.Router();
 
 /**
+ * GET /api/licenses/whoami — public IP of the caller (FiveM server outbound).
+ */
+licensesRouter.get("/whoami", (req, res) => {
+  return res.json({ ip: getRequestClientIp(req) });
+});
+
+/**
+ * POST /api/licenses/activate
+ * Body: { licenseKey, packageId, resourceName?, buildId? }
+ * IP is taken from the request — nothing in server.cfg required.
+ */
+licensesRouter.post("/activate", async (req, res) => {
+  try {
+    const { licenseKey, packageId, resourceName, buildId } = req.body || {};
+    if (!licenseKey || !packageId) {
+      return res.status(400).json({ valid: false, error: "licenseKey and packageId are required" });
+    }
+
+    const result = await activateLicenseFromRequest(req, {
+      licenseKey,
+      packageId,
+      resourceName,
+      buildId
+    });
+
+    if (!result.valid) {
+      return res.status(result.reason === "ip_mismatch" ? 403 : 401).json(result);
+    }
+
+    return res.json(result);
+  } catch (err) {
+    console.error("[licenses/activate]", err);
+    return res.status(500).json({ valid: false, error: "Activation failed" });
+  }
+});
+
+/**
  * POST /api/licenses/validate
- * FiveM (server-side): licenseKey, packageId, resourceName, serverIp, fivemLicenseId?
- * Simple check (download page): omit serverIp for basic validation only.
  */
 licensesRouter.post("/validate", async (req, res) => {
   try {

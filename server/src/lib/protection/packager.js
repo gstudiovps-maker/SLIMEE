@@ -7,73 +7,22 @@ import {
   normalizeEscrowIgnore,
   normalizeProtectionMode
 } from "./escrow.js";
-import {
-  buildSlimeeInitLua,
-  buildSlimeeGuardPrefix,
-  buildSlimeeServerCfgSnippet
-} from "./slimeeLockLua.js";
+import { deriveSlimeeKey, encryptSlimeefxap, luaPathToSlimeefxap } from "./slimeefxap.js";
+import { buildSlimeeLicenseLua } from "./slimeeLicenseLua.js";
+import { buildSlimeeLoaderLua } from "./slimeeLoaderLua.js";
 import { patchFxManifestContent } from "./fxmanifestPatch.js";
-
-const REDISTRIBUTE_NOTICE =
-  "-- Do not redistribute. Unauthorized sharing may revoke your license.\n\n";
-
-/**
- * Pick a long-string delimiter level so the payload can be embedded safely.
- * [=[ ... ]=] style — preserves original source (no comment stripping).
- */
-function pickLongStringDelimiter(source) {
-  for (let level = 0; level < 8; level += 1) {
-    const eq = "=".repeat(level);
-    const close = `]${eq}]`;
-    if (!source.includes(close)) {
-      return { open: `[${eq}[`, close: `]${eq}]` };
-    }
-  }
-  throw new Error("Lua source cannot be embedded (no safe long-string delimiter)");
-}
-
-function luaChunkName(entryName) {
-  const path = String(entryName || "script.lua").replace(/\\/g, "/").replace(/^\//, "");
-  return `"@${path.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`;
-}
-
-/**
- * FiveM-safe protection: embed exact original Lua, run with load() in global env.
- * - No comment stripping (that breaks valid scripts)
- * - No base64 loader (fragile in FiveM)
- * - No return from chunk (fxmanifest scripts must run for side effects)
- * - Chunk name matches file path for usable stack traces
- */
-function protectLuaContent(content, entryName, { ipLock = false } = {}) {
-  let body = String(content).replace(/^\uFEFF/, "");
-
-  const { open, close } = pickLongStringDelimiter(body);
-  const chunk = luaChunkName(entryName);
-  const guard = ipLock ? buildSlimeeGuardPrefix() : "";
-
-  return (
-    `${REDISTRIBUTE_NOTICE}` +
-    guard +
-    `local __SLIMEE_SRC = ${open}${body}${close}\n` +
-    `local __fn, __err = load(__SLIMEE_SRC, ${chunk}, "t")\n` +
-    `if not __fn then\n` +
-    `  error(("Slimee protected load failed [%s]: %s"):format(${chunk}, __err or "unknown"), 2)\n` +
-    `end\n` +
-    `return __fn()\n`
-  );
-}
 
 function buildLicenseManifest(meta) {
   return JSON.stringify(
     {
-      product: "Protected Package Delivery",
+      product: "Slimee Protected Delivery",
+      format: "slimeefxap",
       packageId: meta.packageId,
       licenseKey: meta.licenseKey,
-      customerEmail: meta.customerEmail || null,
       buildId: meta.buildId,
       generatedAt: meta.generatedAt,
       protectionMode: meta.protectionMode,
-      note: "License Locking — validate your server with the Slimee API."
+      note: "Each customer copy is unique. IP locks on first start. No server.cfg required."
     },
     null,
     2
@@ -99,9 +48,13 @@ export function buildProtectedPackage(sourceBuffer, pkg, license) {
     protectionMode
   };
 
+  const decryptKey = deriveSlimeeKey(meta);
+  const decryptKeyHex = decryptKey.toString("hex");
+  const useProtection = protectionMode !== "open";
+
   const sourceZip = new AdmZip(sourceBuffer);
   const outZip = new AdmZip();
-  const useIpLock = protectionMode !== "open";
+  const encryptedManifest = [];
   let manifestPath = null;
   let manifestPatched = false;
 
@@ -115,60 +68,53 @@ export function buildProtectedPackage(sourceBuffer, pkg, license) {
 
     if (isManifestFile(name)) {
       manifestPath = name;
-      if (useIpLock) {
+      if (useProtection) {
         continue;
       }
     }
 
-    if (protectionMode === "open") {
+    if (!useProtection) {
       outZip.addFile(name, content);
       continue;
     }
 
     const ignored = isEscrowIgnored(name, escrowIgnore) || isManifestFile(name);
-    if (!isLuaFile(name) || ignored) {
+    const isClient = /^client/i.test(name) || /\/client\//i.test(name);
+
+    if (!isLuaFile(name) || ignored || isClient) {
       outZip.addFile(name, content);
       continue;
     }
 
-    if (protectionMode === "full" || protectionMode === "partial") {
-      const text = content.toString("utf8");
-      const isClient = /^client/i.test(name) || /\/client\//i.test(name);
-      content = Buffer.from(
-        protectLuaContent(text, name, { ipLock: useIpLock && !isClient }),
-        "utf8"
-      );
-    }
-
-    outZip.addFile(name, content);
+    const slimeePath = luaPathToSlimeefxap(name);
+    const encrypted = encryptSlimeefxap(content, decryptKey);
+    encryptedManifest.push({ path: slimeePath, original: name });
+    outZip.addFile(slimeePath, encrypted);
   }
 
-  if (useIpLock) {
-    outZip.addFile("slimee_protect/init.lua", Buffer.from(buildSlimeeInitLua(meta), "utf8"));
-    outZip.addFile(
-      "slimee_protect/server.cfg.example",
-      Buffer.from(buildSlimeeServerCfgSnippet(meta), "utf8")
-    );
+  if (useProtection) {
+    outZip.addFile("slimee_license.lua", Buffer.from(buildSlimeeLicenseLua(meta, decryptKeyHex), "utf8"));
+    outZip.addFile("slimee_protect/loader.lua", Buffer.from(buildSlimeeLoaderLua(encryptedManifest), "utf8"));
 
     if (!manifestPath) {
       manifestPath = "fxmanifest.lua";
       outZip.addFile(
         manifestPath,
-        Buffer.from(
-          patchFxManifestContent("fx_version 'cerulean'\ngame 'gta5'\n", meta.packageId),
-          "utf8"
-        )
+        Buffer.from(patchFxManifestContent("fx_version 'cerulean'\ngame 'gta5'\n", encryptedManifest), "utf8")
       );
       manifestPatched = true;
-    }
-  }
-
-  if (useIpLock && manifestPath && !manifestPatched) {
-    const manifestEntry = sourceZip.getEntry(manifestPath);
-    if (manifestEntry) {
-      const patched = patchFxManifestContent(manifestEntry.getData().toString("utf8"), meta.packageId);
-      outZip.addFile(manifestPath, Buffer.from(patched, "utf8"));
-      manifestPatched = true;
+    } else {
+      const manifestEntry = sourceZip.getEntry(manifestPath);
+      if (manifestEntry) {
+        outZip.addFile(
+          manifestPath,
+          Buffer.from(
+            patchFxManifestContent(manifestEntry.getData().toString("utf8"), encryptedManifest),
+            "utf8"
+          )
+        );
+        manifestPatched = true;
+      }
     }
   }
 
@@ -176,39 +122,26 @@ export function buildProtectedPackage(sourceBuffer, pkg, license) {
     "SLIMEE_PROTECTED/README.txt",
     Buffer.from(
       [
-        "Protected Package Delivery",
+        "Slimee Protected Delivery",
         "========================",
         `Package: ${meta.packageId}`,
         `License: ${meta.licenseKey}`,
         `Build: ${buildId}`,
         "",
-        "Files outside escrow_ignore were processed with License Locking.",
-        "Configure editable paths in your admin panel (escrow_ignore).",
+        "NO SERVER.CFG NEEDED",
+        "- Drag this resource into your server and start it.",
+        "- slimee_license.lua calls the Slimee API and locks to your server public IP.",
+        "- Sharing this folder will NOT work on another server (IP mismatch).",
         "",
-        "IP LOCK (not CFX FXAP):",
-        "- This package uses Slimee IP Lock via slimee_protect/init.lua",
-        "- Official Tebex/CFX .fxap escrow requires selling on Cfx Keymaster.",
-        "- Add slimee_protect/server.cfg.example lines to server.cfg",
-        meta.boundServerIp ? `- Admin pre-locked IP: ${meta.boundServerIp}` : "- IP binds on first server start"
+        "FORMAT: .slimeefxap (Slimee escrow — not Cfx FXAP)",
+        `Encrypted scripts: ${encryptedManifest.length}`,
+        meta.boundServerIp ? `Admin pre-locked IP: ${meta.boundServerIp}` : "IP locks automatically on first start."
       ].join("\n"),
       "utf8"
     )
   );
 
   outZip.addFile("SLIMEE_PROTECTED/license.json", Buffer.from(buildLicenseManifest(meta), "utf8"));
-  outZip.addFile(
-    "SLIMEE_PROTECTED/NOT_FXAP.txt",
-    Buffer.from(
-      [
-        "This is NOT a Cfx/Tebex FXAP asset.",
-        "Slimee IP Lock uses your Render API + license key in server.cfg.",
-        "Real .fxap files only work when published through Cfx.re Keymaster.",
-        "Your tool at E:/TOOL/WORKING/CFX decrypts third-party FXAP — it cannot create",
-        "official escrow for your own store. Slimee IP Lock is the supported alternative."
-      ].join("\n"),
-      "utf8"
-    )
-  );
 
   return outZip.toBuffer();
 }

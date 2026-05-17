@@ -8,34 +8,47 @@ export function findManifestEntry(entries) {
   return null;
 }
 
+function escapeRe(s) {
+  return String(s).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 /**
- * Insert slimee_protect/init.lua as the first server_script.
+ * Remove server_script entries for files that were replaced by .slimeefxap + loader.
  */
-export function patchFxManifestContent(content, resourceName) {
-  const initPath = "slimee_protect/init.lua";
-  let text = String(content).replace(/^\uFEFF/, "");
+function stripReplacedServerScripts(text, encryptedManifest) {
+  let out = text;
+  for (const entry of encryptedManifest) {
+    const paths = [entry.original, entry.path];
+    for (const p of paths) {
+      const e = escapeRe(p);
+      out = out.replace(new RegExp(`\\s*['"]${e}['"]\\s*,?`, "g"), "\n");
+      out = out.replace(new RegExp(`,\\s*['"]${e}['"]`, "g"), "");
+    }
+  }
+  return out.replace(/server_scripts\s*\{\s*,/g, "server_scripts {\n").replace(/,\s*\}/g, "\n}");
+}
 
-  if (text.includes("slimee_protect/init.lua")) {
-    return text;
+/**
+ * Slimee: slimee_license.lua → loader.lua (decrypts all .slimeefxap)
+ */
+export function patchFxManifestContent(content, encryptedManifest = []) {
+  let text = stripReplacedServerScripts(String(content).replace(/^\uFEFF/, ""), encryptedManifest);
+
+  const slimeeScripts = ["slimee_license.lua", "slimee_protect/loader.lua"];
+
+  for (const script of slimeeScripts) {
+    if (text.includes(`'${script}'`) || text.includes(`"${script}"`)) {
+      continue;
+    }
+    if (/server_scripts\s*\{/.test(text)) {
+      text = text.replace(/server_scripts\s*\{/, (m) => `${m}\n  '${script}',`);
+    } else if (/server_script\s+['"]/.test(text)) {
+      text = text.replace(/(server_script\s+['"][^'"]+['"])/, `server_script '${script}'\n$1`);
+    } else {
+      const header = /fx_version/i.test(text) ? "" : "fx_version 'cerulean'\ngame 'gta5'\n\n";
+      text = `${header}${text.trim()}\nserver_script '${script}'\n`;
+    }
   }
 
-  const scriptLine = `server_script '${initPath}'`;
-
-  if (/server_script\s+['"]@?slimee_protect\/init\.lua['"]/i.test(text)) {
-    return text;
-  }
-
-  if (/server_scripts\s*\{/.test(text)) {
-    return text.replace(/server_scripts\s*\{/, (match) => `${match}\n  '${initPath}',`);
-  }
-
-  if (/server_script\s+['"]/.test(text)) {
-    return text.replace(/(server_script\s+['"][^'"]+['"])/, `${scriptLine}\n$1`);
-  }
-
-  const header = `fx_version 'cerulean'\ngame 'gta5'\n\n`;
-  const hasFxVersion = /fx_version/i.test(text);
-  const body = hasFxVersion ? text : `${header}${text}`;
-
-  return `${body.trim()}\n\n${scriptLine}\n`;
+  return text.trim() + "\n";
 }
