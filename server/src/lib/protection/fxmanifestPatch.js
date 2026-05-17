@@ -1,17 +1,24 @@
 /**
- * Patch fxmanifest so slimee_license + slimee_loader run first, then protected server .lua stubs.
+ * Patch fxmanifest: slimee loaders first, then protected server/client .lua stubs.
  */
 export function patchFxManifestContent(content, options = {}) {
-  const protectedScripts = options.protectedServerScripts || [];
+  const protectedServer = options.protectedServerScripts || [];
+  const protectedClient = options.protectedClientScripts || [];
   let text = String(content).replace(/^\uFEFF/, "");
 
-  const slimeeScripts = ["slimee_license.lua", "slimee_loader.lua"];
-  for (const script of slimeeScripts) {
-    text = ensureServerScriptListed(text, script, true);
+  text = ensureServerScriptListed(text, "slimee_license.lua", true);
+  text = ensureServerScriptListed(text, "slimee_loader.lua", true);
+
+  for (const script of protectedServer) {
+    text = ensureServerScriptListed(text, script, false);
   }
 
-  for (const script of protectedScripts) {
-    text = ensureServerScriptListed(text, script, false);
+  if (options.includeClientLoader) {
+    text = ensureClientScriptListed(text, "slimee_client.lua", true);
+  }
+
+  for (const script of protectedClient) {
+    text = ensureClientScriptListed(text, script, false);
   }
 
   return text.trim() + "\n";
@@ -28,10 +35,7 @@ function isScriptListed(text, script) {
 
 function ensureServerScriptListed(text, script, prepend) {
   if (isScriptListed(text, script)) {
-    if (!prepend) {
-      return text;
-    }
-    return moveScriptFirst(text, script);
+    return prepend ? moveScriptFirst(text, script, "server") : text;
   }
 
   if (/server_scripts\s*\{/.test(text)) {
@@ -39,10 +43,8 @@ function ensureServerScriptListed(text, script, prepend) {
       return text.replace(/server_scripts\s*\{/, (m) => `${m}\n  '${script}',`);
     }
     return text.replace(/server_scripts\s*\{([^}]*)\}/, (m, inner) => {
-      if (inner.trim().endsWith(",")) {
-        return `server_scripts {${inner}\n  '${script}',\n}`;
-      }
-      return `server_scripts {${inner}\n  '${script}'\n}`;
+      const sep = inner.trim().length > 0 && !inner.trim().endsWith(",") ? "," : "";
+      return `server_scripts {${inner}${sep}\n  '${script}',\n}`;
     });
   }
 
@@ -57,9 +59,38 @@ function ensureServerScriptListed(text, script, prepend) {
   return `${header}${text.trim()}\nserver_script '${script}'\n`;
 }
 
-function moveScriptFirst(text, script) {
+function ensureClientScriptListed(text, script, prepend) {
+  if (isScriptListed(text, script)) {
+    return prepend ? moveScriptFirst(text, script, "client") : text;
+  }
+
+  if (/client_scripts\s*\{/.test(text)) {
+    if (prepend) {
+      return text.replace(/client_scripts\s*\{/, (m) => `${m}\n  '${script}',`);
+    }
+    return text.replace(/client_scripts\s*\{([^}]*)\}/, (m, inner) => {
+      const sep = inner.trim().length > 0 && !inner.trim().endsWith(",") ? "," : "";
+      return `client_scripts {${inner}${sep}\n  '${script}',\n}`;
+    });
+  }
+
+  if (/client_script\s+['"]/.test(text)) {
+    if (prepend) {
+      return text.replace(/(client_script\s+['"][^'"]+['"])/, `client_script '${script}'\n$1`);
+    }
+    return `${text.trim()}\nclient_script '${script}'\n`;
+  }
+
+  const header = /fx_version/i.test(text) ? "" : "fx_version 'cerulean'\ngame 'gta5'\n\n";
+  return `${header}${text.trim()}\nclient_script '${script}'\n`;
+}
+
+function moveScriptFirst(text, script, side) {
   const e = escapeRe(script);
   const lineRe = new RegExp(`\\s*['"]${e}['"]\\s*,?\\n?`, "g");
-  let cleaned = text.replace(lineRe, "");
+  const cleaned = text.replace(lineRe, "");
+  if (side === "client") {
+    return ensureClientScriptListed(cleaned, script, true);
+  }
   return ensureServerScriptListed(cleaned, script, true);
 }

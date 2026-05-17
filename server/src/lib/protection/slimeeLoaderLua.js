@@ -1,12 +1,23 @@
 /**
- * Server loader — no decrypt keys in slimee_license.lua.
- * Decrypts via Slimee API (ChaCha20 SLME vault blobs).
+ * Server loader — decrypts server + client vault via API; pushes client scripts over net events.
  */
-export function buildSlimeeLoaderLua(fileManifest) {
-  const listJson = JSON.stringify(fileManifest).replace(/\\/g, "\\\\").replace(/'/g, "\\'");
+export function buildSlimeeLoaderLua(serverManifest, clientManifest, buildId) {
+  const serverJson = JSON.stringify(serverManifest).replace(/\\/g, "\\\\").replace(/'/g, "\\'");
+  const clientJson = JSON.stringify(clientManifest).replace(/\\/g, "\\\\").replace(/'/g, "\\'");
+  const token = String(buildId || "x")
+    .replace(/[^a-zA-Z0-9]/g, "")
+    .slice(0, 12);
+  const evtScript = `slimee_cs_${token}`;
+  const evtReady = `slimee_cr_${token}`;
+  const evtRequest = `slimee_cq_${token}`;
 
   return `-- Slimee loader (server)
-local FILES = json.decode('${listJson}')
+local SERVER_FILES = json.decode('${serverJson}')
+local CLIENT_FILES = json.decode('${clientJson}')
+local EVT_SCRIPT = "${evtScript}"
+local EVT_READY = "${evtReady}"
+local EVT_REQUEST = "${evtRequest}"
+local ClientCache = {}
 
 local b64chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
 local function b64encode(data)
@@ -69,7 +80,7 @@ local function unlockScript(entry)
   return result.data.source, nil
 end
 
-local function runEntry(entry)
+local function runServerEntry(entry)
   if SlimeeLock and SlimeeLock.WaitReady then
     SlimeeLock.WaitReady()
   end
@@ -85,20 +96,59 @@ local function runEntry(entry)
 end
 
 function SlimeeLoad(luaPath)
-  for _, entry in ipairs(FILES) do
+  for _, entry in ipairs(SERVER_FILES) do
     if entry.lua == luaPath then
-      return runEntry(entry)
+      return runServerEntry(entry)
     end
   end
-  error(("[slimee] unknown %s"):format(luaPath), 2)
+  error(("[slimee] unknown server script %s"):format(luaPath), 2)
 end
+
+local function pushClientScripts(target)
+  for luaPath, source in pairs(ClientCache) do
+    TriggerClientEvent(EVT_SCRIPT, target, luaPath, source)
+  end
+  TriggerClientEvent(EVT_READY, target)
+end
+
+local function unlockAllClient()
+  if SlimeeLock and SlimeeLock.WaitReady then
+    SlimeeLock.WaitReady()
+  end
+  for _, entry in ipairs(CLIENT_FILES) do
+    local src, err = unlockScript(entry)
+    if not src then
+      return false, ("%s: %s"):format(entry.lua, err)
+    end
+    ClientCache[entry.lua] = src
+  end
+  return true
+end
+
+CreateThread(function()
+  if #CLIENT_FILES < 1 then
+    return
+  end
+  local ok, err = unlockAllClient()
+  if not ok then
+    return stop(("Client unlock failed: %s"):format(err))
+  end
+  pushClientScripts(-1)
+  print(("^2[slimee_loader] %d client script(s) ready^0"):format(#CLIENT_FILES))
+end)
+
+RegisterNetEvent(EVT_REQUEST, function()
+  local playerId = source
+  if not playerId or #CLIENT_FILES < 1 or next(ClientCache) == nil then return end
+  pushClientScripts(playerId)
+end)
 `;
 }
 
 export function buildLuaStub(luaPath) {
   const safe = luaPath.replace(/\\/g, "/").replace(/"/g, '\\"');
-  return `-- Slimee protected — executed via slimee_loader.lua
+  return `-- Slimee protected (server)
 if SlimeeLoad then return SlimeeLoad("${safe}") end
-error("[slimee] start resource with slimee_license + slimee_loader first", 0)
+error("[slimee] start slimee_license + slimee_loader first", 0)
 `;
 }
