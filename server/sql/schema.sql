@@ -46,6 +46,8 @@ CREATE TABLE IF NOT EXISTS download_tokens (
 
   expires_at TIMESTAMPTZ NOT NULL,
 
+  used_at TIMESTAMPTZ,
+
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 
 );

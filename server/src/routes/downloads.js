@@ -7,11 +7,14 @@ import { buildProtectedPackage } from "../lib/protection/packager.js";
 import { logDownload, logDownloadFile } from "../lib/downloadLog.js";
 import {
   createDownloadToken,
-  DOWNLOAD_TOKEN_TTL_MS
+  DOWNLOAD_TOKEN_TTL_MS,
+  DOWNLOAD_TOKEN_STORAGE,
+  markDownloadTokenUsed
 } from "../lib/downloadTokens.js";
 import { readSourceBufferByKey } from "../lib/packageStorage.js";
 import { resolveDownloadContext } from "../lib/downloadResolve.js";
 import { INVALID_DOWNLOAD_TOKEN_MESSAGE } from "../lib/downloadConstants.js";
+import { buildDownloadUrls } from "../lib/apiUrl.js";
 
 export { INVALID_DOWNLOAD_TOKEN_MESSAGE };
 
@@ -50,9 +53,12 @@ async function assertActiveLicense(licenseKey, packageId) {
 /** GET /api/downloads/file/:token/status */
 export async function downloadFileStatusHandler(req, res) {
   const rawToken = req.params.token;
+  const normalizedToken = String(rawToken || "").trim().toLowerCase();
   logDownload("file_status_start", {
-    tokenReceived: Boolean(rawToken),
-    tokenPrefix: rawToken ? `${String(rawToken).slice(0, 8)}…` : null
+    tokenReceivedRaw: rawToken || null,
+    tokenReceivedNormalized: normalizedToken,
+    tokenLength: normalizedToken.length,
+    tokenStorage: DOWNLOAD_TOKEN_STORAGE
   });
 
   const ctx = await resolveDownloadContext(rawToken);
@@ -148,23 +154,30 @@ export async function downloadRequestHandler(req, res) {
     });
 
     const expiresAt = new Date(tokenRow.expires_at);
-    const downloadUrl = `${config.apiPublicUrl}/api/downloads/file/${tokenRow.token}`;
-    const statusUrl = `${config.apiPublicUrl}/api/downloads/file/${tokenRow.token}/status`;
+    const { apiBase, downloadUrl, statusUrl } = buildDownloadUrls(req, tokenRow.token);
 
     logDownload("request_token_created", {
       packageId,
       licenseId: check.license.id,
       storageKey,
-      tokenPrefix: `${tokenRow.token.slice(0, 8)}…`,
+      token: tokenRow.token,
+      tokenStorage: DOWNLOAD_TOKEN_STORAGE,
+      downloadTokenId: tokenRow.id,
+      downloadUrl,
+      statusUrl,
+      apiBaseResolved: apiBase,
+      configApiPublicUrl: config.apiPublicUrl,
       expiresAt: expiresAt.toISOString()
     });
 
     return res.json({
+      token: tokenRow.token,
       downloadUrl,
       statusUrl,
       expiresAt: expiresAt.toISOString(),
       expiresInSeconds: Math.floor(DOWNLOAD_TOKEN_TTL_MS / 1000),
       packageId,
+      tokenStorage: DOWNLOAD_TOKEN_STORAGE,
       delivery: "stream",
       clientDownloadMode: "navigate"
     });
@@ -178,12 +191,16 @@ export async function downloadRequestHandler(req, res) {
 /** GET /api/downloads/file/:token */
 export async function downloadFileHandler(req, res) {
   const rawToken = req.params.token;
+  const normalizedToken = String(rawToken || "").trim().toLowerCase();
   const tokenPrefix = rawToken ? `${String(rawToken).slice(0, 8)}…` : null;
 
   logDownload("file_start", {
-    tokenReceived: Boolean(rawToken),
+    tokenReceivedRaw: rawToken || null,
+    tokenReceivedNormalized: normalizedToken,
+    tokenLength: normalizedToken.length,
     tokenPrefix,
-    path: req.originalUrl || req.url
+    path: req.originalUrl || req.url,
+    tokenStorage: DOWNLOAD_TOKEN_STORAGE
   });
 
   const respondError = (status, code, message, fields = {}) => {
@@ -209,6 +226,14 @@ export async function downloadFileHandler(req, res) {
     });
 
     if (!ctx.ok) {
+      logDownload("file_token_mismatch", {
+        tokenReceivedRaw: rawToken,
+        tokenReceivedNormalized: normalizedToken,
+        tokenFound: ctx.tokenFound,
+        storedToken: ctx.token || null,
+        tokensMatch: ctx.token ? ctx.token === normalizedToken : false,
+        code: ctx.code
+      });
       return respondError(ctx.status, ctx.code, ctx.error, {
         tokenFound: ctx.tokenFound,
         tokenValid: ctx.tokenValid,
@@ -259,8 +284,13 @@ export async function downloadFileHandler(req, res) {
     const protectedZip = buildProtectedPackage(source, pkg, licenseRow);
     const filename = `${packageId}-${row.license_key.slice(0, 8)}-protected.zip`;
 
+    await markDownloadTokenUsed(rawToken);
+
     logDownloadFile("file_response", 200, {
-      tokenPrefix,
+      tokenReceivedRaw: rawToken,
+      tokenReceivedNormalized: normalizedToken,
+      storedToken: ctx.token,
+      tokensMatch: ctx.token === normalizedToken,
       packageId,
       licenseId,
       sourceStorageKey,

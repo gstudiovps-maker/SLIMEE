@@ -59,7 +59,7 @@ export async function resolveDownloadContext(tokenValue) {
     return {
       ...base,
       ok: false,
-      status: 404,
+      status: 410,
       code: "token_expired",
       error: INVALID_DOWNLOAD_TOKEN_MESSAGE
     };

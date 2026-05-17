@@ -13,6 +13,7 @@ import { adminLicensesRouter } from "./routes/adminLicenses.js";
 import { seedAdminsFromEnv } from "./lib/adminSeed.js";
 import { seedPackagesFromJsonIfEmpty } from "./lib/packages.js";
 import { logAdminStartupDiagnostics } from "./lib/adminAuthLog.js";
+import { ensureDownloadTokensTable } from "./lib/ensureDownloadTokens.js";
 
 assertConfig();
 
@@ -77,6 +78,7 @@ app.use((err, req, res, _next) => {
 
 async function bootstrap() {
   try {
+    await ensureDownloadTokensTable();
     await logAdminStartupDiagnostics();
     await seedPackagesFromJsonIfEmpty();
     await seedAdminsFromEnv();
