@@ -12,6 +12,7 @@ import { buildSlimeeLicenseLua } from "./slimeeLicenseLua.js";
 import { buildSlimeeLoaderLua, buildLuaStub } from "./slimeeLoaderLua.js";
 import { patchFxManifestContent } from "./fxmanifestPatch.js";
 import { vaultPathForLua } from "./vaultPath.js";
+import { detectResourceRoot, toResourceRelative, toZipPath } from "./resourceRoot.js";
 
 const SLIMEE_SERVER_FILES = new Set([
   "slimee_license.lua",
@@ -20,17 +21,31 @@ const SLIMEE_SERVER_FILES = new Set([
   "__resource.lua"
 ]);
 
-function isSlimeeInternal(name) {
-  const n = name.replace(/\\/g, "/").toLowerCase();
-  return n.startsWith("slimee_vault/") || n.startsWith("slimee_protected/");
+function isSlimeeInternal(relPath) {
+  const n = relPath.replace(/\\/g, "/").toLowerCase();
+  return (
+    n.startsWith("slimee_vault/") ||
+    n.startsWith("slimee_protected/") ||
+    n === "slimee_license.lua" ||
+    n === "slimee_loader.lua"
+  );
 }
 
-function isServerLuaPath(name) {
-  const n = name.replace(/\\/g, "/").toLowerCase();
-  if (SLIMEE_SERVER_FILES.has(n.split("/").pop())) return false;
-  if (n.startsWith("client/") || n.startsWith("client_")) return false;
-  if (/\/client\//.test(n)) return false;
-  if (n.includes("client.lua")) return false;
+function isServerLuaPath(relPath) {
+  const n = relPath.replace(/\\/g, "/").toLowerCase();
+  const base = n.split("/").pop();
+  if (SLIMEE_SERVER_FILES.has(base)) {
+    return false;
+  }
+  if (n.startsWith("client/") || n.startsWith("client_")) {
+    return false;
+  }
+  if (/\/client\//.test(n)) {
+    return false;
+  }
+  if (n.includes("client.lua")) {
+    return false;
+  }
   return n.endsWith(".lua");
 }
 
@@ -51,7 +66,7 @@ function buildLicenseManifest(meta) {
 }
 
 /**
- * Build customer ZIP — preserves folder layout; server .lua stubs + vault; client stays plain .lua.
+ * One FiveM resource folder in the ZIP + license.json at archive root only.
  */
 export function buildProtectedPackage(sourceBuffer, pkg, license) {
   const protectionMode = normalizeProtectionMode(pkg.protectionMode || pkg.protection_mode);
@@ -73,86 +88,93 @@ export function buildProtectedPackage(sourceBuffer, pkg, license) {
   const useProtection = protectionMode !== "open";
 
   const sourceZip = new AdmZip(sourceBuffer);
+  const entries = sourceZip.getEntries();
+  const resourceRoot = detectResourceRoot(entries);
   const outZip = new AdmZip();
   const serverManifest = [];
-  let manifestPath = null;
+  let manifestRelPath = null;
+  let manifestZipPath = null;
 
-  for (const entry of sourceZip.getEntries()) {
+  for (const entry of entries) {
     if (entry.isDirectory) {
       continue;
     }
 
-    const name = entry.entryName.replace(/\\/g, "/");
+    const zipName = entry.entryName.replace(/\\/g, "/");
+    const rel = toResourceRelative(zipName, resourceRoot);
+
+    if (rel == null || rel === "" || rel.includes("..")) {
+      continue;
+    }
+
     const content = entry.getData();
 
-    if (isManifestFile(name)) {
-      manifestPath = name;
+    if (isManifestFile(rel)) {
+      manifestRelPath = rel;
+      manifestZipPath = toZipPath(rel, resourceRoot);
       continue;
     }
 
-    if (isSlimeeInternal(name)) {
+    if (isSlimeeInternal(rel)) {
       continue;
     }
+
+    const outPath = toZipPath(rel, resourceRoot);
 
     if (!useProtection) {
-      outZip.addFile(name, content);
+      outZip.addFile(outPath, content);
       continue;
     }
 
-    const ignored = isEscrowIgnored(name, escrowIgnore) || isManifestFile(name);
-    const encryptServer = isServerLuaPath(name) && isLuaFile(name) && !ignored;
+    const ignored = isEscrowIgnored(rel, escrowIgnore);
+    const encryptServer = isServerLuaPath(rel) && isLuaFile(rel) && !ignored;
 
     if (encryptServer) {
-      const vault = vaultPathForLua(name);
+      const vaultRel = vaultPathForLua(rel);
       const encrypted = encryptLuaChaCha(content, resourceKey);
-      serverManifest.push({ lua: name, vault });
-      outZip.addFile(vault, encrypted);
-      outZip.addFile(name, Buffer.from(buildLuaStub(name), "utf8"));
+      serverManifest.push({ lua: rel, vault: vaultRel });
+      outZip.addFile(toZipPath(vaultRel, resourceRoot), encrypted);
+      outZip.addFile(outPath, Buffer.from(buildLuaStub(rel), "utf8"));
       continue;
     }
 
-    outZip.addFile(name, content);
+    outZip.addFile(outPath, content);
   }
 
   if (useProtection) {
-    outZip.addFile("slimee_license.lua", Buffer.from(buildSlimeeLicenseLua(meta), "utf8"));
-    outZip.addFile("slimee_loader.lua", Buffer.from(buildSlimeeLoaderLua(serverManifest), "utf8"));
+    const licenseRel = "slimee_license.lua";
+    const loaderRel = "slimee_loader.lua";
 
-    const manifestEntry = manifestPath ? sourceZip.getEntry(manifestPath) : null;
+    outZip.addFile(
+      toZipPath(licenseRel, resourceRoot),
+      Buffer.from(buildSlimeeLicenseLua(meta), "utf8")
+    );
+    outZip.addFile(
+      toZipPath(loaderRel, resourceRoot),
+      Buffer.from(buildSlimeeLoaderLua(serverManifest), "utf8")
+    );
+
+    const manifestEntry = manifestZipPath ? sourceZip.getEntry(manifestZipPath) : null;
     const baseManifest = manifestEntry
       ? manifestEntry.getData().toString("utf8")
       : "fx_version 'cerulean'\ngame 'gta5'\n";
 
+    const protectedNames = serverManifest.map((e) => e.lua);
+    const patched = patchFxManifestContent(baseManifest, {
+      protectedServerScripts: protectedNames
+    });
+
     outZip.addFile(
-      manifestPath || "fxmanifest.lua",
-      Buffer.from(patchFxManifestContent(baseManifest), "utf8")
+      toZipPath(manifestRelPath || "fxmanifest.lua", resourceRoot),
+      Buffer.from(patched, "utf8")
     );
-  } else if (manifestPath) {
-    outZip.addFile(manifestPath, sourceZip.getEntry(manifestPath).getData());
+
+    outZip.addFile("license.json", Buffer.from(buildLicenseManifest(meta), "utf8"));
+  } else {
+    if (manifestZipPath) {
+      outZip.addFile(manifestZipPath, sourceZip.getEntry(manifestZipPath).getData());
+    }
   }
-
-  outZip.addFile(
-    "SLIMEE_PROTECTED/README.txt",
-    Buffer.from(
-      [
-        "Slimee Protected Delivery",
-        "========================",
-        `Package: ${meta.packageId}`,
-        `Build: ${buildId}`,
-        "",
-        "Structure preserved (client/, server/, stream/, etc.)",
-        "Server scripts: ChaCha20 encrypted (CFX FXAP-style) in slimee_vault/",
-        "Matching paths still end in .lua (loader stubs).",
-        "Client scripts: plain .lua (unchanged paths).",
-        "",
-        "Start order: slimee_license.lua → slimee_loader.lua",
-        "No server.cfg — IP locks on first start via slimee_license.lua"
-      ].join("\n"),
-      "utf8"
-    )
-  );
-
-  outZip.addFile("SLIMEE_PROTECTED/license.json", Buffer.from(buildLicenseManifest(meta), "utf8"));
 
   return outZip.toBuffer();
 }
