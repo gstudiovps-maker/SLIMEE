@@ -7,22 +7,43 @@ import {
   normalizeEscrowIgnore,
   normalizeProtectionMode
 } from "./escrow.js";
-import { deriveSlimeeKey, encryptSlimeefxap, luaPathToSlimeefxap } from "./slimeefxap.js";
+import { deriveResourceKey, encryptLuaChaCha } from "./slimeeChaCha.js";
 import { buildSlimeeLicenseLua } from "./slimeeLicenseLua.js";
-import { buildSlimeeLoaderLua } from "./slimeeLoaderLua.js";
+import { buildSlimeeLoaderLua, buildLuaStub } from "./slimeeLoaderLua.js";
 import { patchFxManifestContent } from "./fxmanifestPatch.js";
+import { vaultPathForLua } from "./vaultPath.js";
+
+const SLIMEE_SERVER_FILES = new Set([
+  "slimee_license.lua",
+  "slimee_loader.lua",
+  "fxmanifest.lua",
+  "__resource.lua"
+]);
+
+function isSlimeeInternal(name) {
+  const n = name.replace(/\\/g, "/").toLowerCase();
+  return n.startsWith("slimee_vault/") || n.startsWith("slimee_protected/");
+}
+
+function isServerLuaPath(name) {
+  const n = name.replace(/\\/g, "/").toLowerCase();
+  if (SLIMEE_SERVER_FILES.has(n.split("/").pop())) return false;
+  if (n.startsWith("client/") || n.startsWith("client_")) return false;
+  if (/\/client\//.test(n)) return false;
+  if (n.includes("client.lua")) return false;
+  return n.endsWith(".lua");
+}
 
 function buildLicenseManifest(meta) {
   return JSON.stringify(
     {
       product: "Slimee Protected Delivery",
-      format: "slimeefxap",
+      encryption: "chacha20-slme-cfx-family",
       packageId: meta.packageId,
       licenseKey: meta.licenseKey,
       buildId: meta.buildId,
       generatedAt: meta.generatedAt,
-      protectionMode: meta.protectionMode,
-      note: "Each customer copy is unique. IP locks on first start. No server.cfg required."
+      protectionMode: meta.protectionMode
     },
     null,
     2
@@ -30,7 +51,7 @@ function buildLicenseManifest(meta) {
 }
 
 /**
- * Build customer-specific protected ZIP in memory.
+ * Build customer ZIP — preserves folder layout; server .lua stubs + vault; client stays plain .lua.
  */
 export function buildProtectedPackage(sourceBuffer, pkg, license) {
   const protectionMode = normalizeProtectionMode(pkg.protectionMode || pkg.protection_mode);
@@ -48,15 +69,13 @@ export function buildProtectedPackage(sourceBuffer, pkg, license) {
     protectionMode
   };
 
-  const decryptKey = deriveSlimeeKey(meta);
-  const decryptKeyHex = decryptKey.toString("hex");
+  const resourceKey = deriveResourceKey(meta);
   const useProtection = protectionMode !== "open";
 
   const sourceZip = new AdmZip(sourceBuffer);
   const outZip = new AdmZip();
-  const encryptedManifest = [];
+  const serverManifest = [];
   let manifestPath = null;
-  let manifestPatched = false;
 
   for (const entry of sourceZip.getEntries()) {
     if (entry.isDirectory) {
@@ -64,13 +83,15 @@ export function buildProtectedPackage(sourceBuffer, pkg, license) {
     }
 
     const name = entry.entryName.replace(/\\/g, "/");
-    let content = entry.getData();
+    const content = entry.getData();
 
     if (isManifestFile(name)) {
       manifestPath = name;
-      if (useProtection) {
-        continue;
-      }
+      continue;
+    }
+
+    if (isSlimeeInternal(name)) {
+      continue;
     }
 
     if (!useProtection) {
@@ -79,43 +100,35 @@ export function buildProtectedPackage(sourceBuffer, pkg, license) {
     }
 
     const ignored = isEscrowIgnored(name, escrowIgnore) || isManifestFile(name);
-    const isClient = /^client/i.test(name) || /\/client\//i.test(name);
+    const encryptServer = isServerLuaPath(name) && isLuaFile(name) && !ignored;
 
-    if (!isLuaFile(name) || ignored || isClient) {
-      outZip.addFile(name, content);
+    if (encryptServer) {
+      const vault = vaultPathForLua(name);
+      const encrypted = encryptLuaChaCha(content, resourceKey);
+      serverManifest.push({ lua: name, vault });
+      outZip.addFile(vault, encrypted);
+      outZip.addFile(name, Buffer.from(buildLuaStub(name), "utf8"));
       continue;
     }
 
-    const slimeePath = luaPathToSlimeefxap(name);
-    const encrypted = encryptSlimeefxap(content, decryptKey);
-    encryptedManifest.push({ path: slimeePath, original: name });
-    outZip.addFile(slimeePath, encrypted);
+    outZip.addFile(name, content);
   }
 
   if (useProtection) {
-    outZip.addFile("slimee_license.lua", Buffer.from(buildSlimeeLicenseLua(meta, decryptKeyHex), "utf8"));
-    outZip.addFile("slimee_protect/loader.lua", Buffer.from(buildSlimeeLoaderLua(encryptedManifest), "utf8"));
+    outZip.addFile("slimee_license.lua", Buffer.from(buildSlimeeLicenseLua(meta), "utf8"));
+    outZip.addFile("slimee_loader.lua", Buffer.from(buildSlimeeLoaderLua(serverManifest), "utf8"));
 
-    if (!manifestPath) {
-      manifestPath = "fxmanifest.lua";
-      outZip.addFile(
-        manifestPath,
-        Buffer.from(patchFxManifestContent("fx_version 'cerulean'\ngame 'gta5'\n", encryptedManifest), "utf8")
-      );
-      manifestPatched = true;
-    } else {
-      const manifestEntry = sourceZip.getEntry(manifestPath);
-      if (manifestEntry) {
-        outZip.addFile(
-          manifestPath,
-          Buffer.from(
-            patchFxManifestContent(manifestEntry.getData().toString("utf8"), encryptedManifest),
-            "utf8"
-          )
-        );
-        manifestPatched = true;
-      }
-    }
+    const manifestEntry = manifestPath ? sourceZip.getEntry(manifestPath) : null;
+    const baseManifest = manifestEntry
+      ? manifestEntry.getData().toString("utf8")
+      : "fx_version 'cerulean'\ngame 'gta5'\n";
+
+    outZip.addFile(
+      manifestPath || "fxmanifest.lua",
+      Buffer.from(patchFxManifestContent(baseManifest), "utf8")
+    );
+  } else if (manifestPath) {
+    outZip.addFile(manifestPath, sourceZip.getEntry(manifestPath).getData());
   }
 
   outZip.addFile(
@@ -125,17 +138,15 @@ export function buildProtectedPackage(sourceBuffer, pkg, license) {
         "Slimee Protected Delivery",
         "========================",
         `Package: ${meta.packageId}`,
-        `License: ${meta.licenseKey}`,
         `Build: ${buildId}`,
         "",
-        "NO SERVER.CFG NEEDED",
-        "- Drag this resource into your server and start it.",
-        "- slimee_license.lua calls the Slimee API and locks to your server public IP.",
-        "- Sharing this folder will NOT work on another server (IP mismatch).",
+        "Structure preserved (client/, server/, stream/, etc.)",
+        "Server scripts: ChaCha20 encrypted (CFX FXAP-style) in slimee_vault/",
+        "Matching paths still end in .lua (loader stubs).",
+        "Client scripts: plain .lua (unchanged paths).",
         "",
-        "FORMAT: .slimeefxap (Slimee escrow — not Cfx FXAP)",
-        `Encrypted scripts: ${encryptedManifest.length}`,
-        meta.boundServerIp ? `Admin pre-locked IP: ${meta.boundServerIp}` : "IP locks automatically on first start."
+        "Start order: slimee_license.lua → slimee_loader.lua",
+        "No server.cfg — IP locks on first start via slimee_license.lua"
       ].join("\n"),
       "utf8"
     )

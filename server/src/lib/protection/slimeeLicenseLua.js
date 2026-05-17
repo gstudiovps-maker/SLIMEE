@@ -1,23 +1,20 @@
 import { config } from "../../config.js";
 
 /**
- * Per-customer server script — no server.cfg required.
- * Credentials + decrypt key are baked in at download time.
+ * Server-only license activation — no decrypt keys in this file.
  */
-export function buildSlimeeLicenseLua(meta, decryptKeyHex) {
+export function buildSlimeeLicenseLua(meta) {
   const api = (config.apiPublicUrl || "").replace(/\\/g, "\\\\").replace(/"/g, '\\"');
   const licenseKey = String(meta.licenseKey || "").replace(/"/g, '\\"');
   const packageId = String(meta.packageId || "").replace(/"/g, '\\"');
   const buildId = String(meta.buildId || "").replace(/"/g, '\\"');
-  const keyHex = String(decryptKeyHex || "").replace(/"/g, '\\"');
 
-  return `-- Slimee license (unique copy — do not share)
+  return `-- Slimee license (server) — unique copy, do not share
 SLIMEE = {
   API = "${api}",
   LICENSE_KEY = "${licenseKey}",
   PACKAGE_ID = "${packageId}",
   BUILD_ID = "${buildId}",
-  DECRYPT_KEY_HEX = "${keyHex}",
   LOCKED_IP = "",
   READY = false
 }
@@ -41,7 +38,7 @@ local function httpJson(method, path, body, cb)
 end
 
 local function activateLicense()
-  print("^3[slimee_license] Activating license and locking server IP...^0")
+  print("^3[slimee_license] Locking to this server's IP...^0")
   local done, result = false, nil
   httpJson("POST", "/api/licenses/activate", {
     licenseKey = SLIMEE.LICENSE_KEY,
@@ -69,13 +66,13 @@ local function activateLicense()
   SLIMEE.LOCKED_IP = result.data.boundServerIp or result.data.serverIp or ""
   SLIMEE.READY = true
   SlimeeLock.ok = true
-  print(("^2[slimee_license] Licensed. Package=%s IP=%s^0"):format(SLIMEE.PACKAGE_ID, SLIMEE.LOCKED_IP))
-  return true, result.data.reason or "ok"
+  print(("^2[slimee_license] OK package=%s locked IP=%s^0"):format(SLIMEE.PACKAGE_ID, SLIMEE.LOCKED_IP))
+  return true
 end
 
 CreateThread(function()
   if SLIMEE.LICENSE_KEY == "" or SLIMEE.PACKAGE_ID == "" then
-    return stop("Invalid Slimee build (missing license data). Re-download from the store.")
+    return stop("Invalid build — re-download from Slimee Store.")
   end
   local ok, err = activateLicense()
   if not ok then
@@ -88,7 +85,7 @@ function SlimeeLock.WaitReady()
   while not SLIMEE.READY do
     Wait(50)
     if GetGameTimer() > deadline then
-      error("[slimee_license] timed out waiting for activation", 0)
+      error("[slimee_license] timed out", 0)
     end
   end
 end

@@ -5,6 +5,7 @@ import {
   activateLicenseFromRequest,
   getRequestClientIp
 } from "../lib/licenseValidation.js";
+import { unlockScriptForRequest } from "../lib/protection/unlockScript.js";
 
 export const licensesRouter = express.Router();
 
@@ -48,6 +49,24 @@ licensesRouter.post("/activate", async (req, res) => {
 /**
  * POST /api/licenses/validate
  */
+/**
+ * POST /api/licenses/unlock-script
+ * Body: { licenseKey, packageId, buildId, blobB64, resourceName?, vaultPath?, luaPath? }
+ * Server-side decrypt only — no keys in customer slimee_license.lua.
+ */
+licensesRouter.post("/unlock-script", async (req, res) => {
+  try {
+    const result = await unlockScriptForRequest(req, req.body);
+    if (!result.ok) {
+      return res.status(result.status).json({ error: result.error });
+    }
+    return res.json({ source: result.source });
+  } catch (err) {
+    console.error("[licenses/unlock-script]", err);
+    return res.status(500).json({ error: "unlock_failed" });
+  }
+});
+
 licensesRouter.post("/validate", async (req, res) => {
   try {
     const { licenseKey, packageId, resourceName, serverIp, fivemLicenseId } = req.body || {};

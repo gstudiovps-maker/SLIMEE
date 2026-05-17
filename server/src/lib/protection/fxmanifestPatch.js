@@ -1,40 +1,11 @@
-const MANIFEST_NAMES = ["fxmanifest.lua", "__resource.lua"];
-
-export function findManifestEntry(entries) {
-  for (const name of MANIFEST_NAMES) {
-    const hit = entries.find((e) => !e.isDirectory && e.entryName.replace(/\\/g, "/").toLowerCase().endsWith(name));
-    if (hit) return hit.entryName.replace(/\\/g, "/");
-  }
-  return null;
-}
-
-function escapeRe(s) {
-  return String(s).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
-
 /**
- * Remove server_script entries for files that were replaced by .slimeefxap + loader.
+ * Keep client/server layout; server uses slimee_license + slimee_loader first.
+ * Encrypted server scripts remain as .lua stubs in server_scripts (original order).
  */
-function stripReplacedServerScripts(text, encryptedManifest) {
-  let out = text;
-  for (const entry of encryptedManifest) {
-    const paths = [entry.original, entry.path];
-    for (const p of paths) {
-      const e = escapeRe(p);
-      out = out.replace(new RegExp(`\\s*['"]${e}['"]\\s*,?`, "g"), "\n");
-      out = out.replace(new RegExp(`,\\s*['"]${e}['"]`, "g"), "");
-    }
-  }
-  return out.replace(/server_scripts\s*\{\s*,/g, "server_scripts {\n").replace(/,\s*\}/g, "\n}");
-}
+export function patchFxManifestContent(content) {
+  let text = String(content).replace(/^\uFEFF/, "");
 
-/**
- * Slimee: slimee_license.lua → loader.lua (decrypts all .slimeefxap)
- */
-export function patchFxManifestContent(content, encryptedManifest = []) {
-  let text = stripReplacedServerScripts(String(content).replace(/^\uFEFF/, ""), encryptedManifest);
-
-  const slimeeScripts = ["slimee_license.lua", "slimee_protect/loader.lua"];
+  const slimeeScripts = ["slimee_license.lua", "slimee_loader.lua"];
 
   for (const script of slimeeScripts) {
     if (text.includes(`'${script}'`) || text.includes(`"${script}"`)) {
