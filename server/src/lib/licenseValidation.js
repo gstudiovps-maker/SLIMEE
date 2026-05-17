@@ -107,12 +107,26 @@ export async function validateLicenseForServer({
     return { valid: false, reason: "wrong_package" };
   }
 
+  if (row.bound_server_ip && row.bound_at && ip && row.bound_server_ip !== ip) {
+    await logValidationEvent({
+      licenseId: row.id,
+      licenseKey: key,
+      packageId: pkgId,
+      resourceName: resource,
+      serverIp: ip,
+      fivemLicenseId: fivem,
+      success: false,
+      reason: "ip_mismatch"
+    });
+    return { valid: false, reason: "ip_mismatch" };
+  }
+
   if (!row.bound_at) {
     await query(
       `UPDATE licenses SET
-        bound_server_ip = $1,
-        bound_fivem_license = $2,
-        bound_resource_name = $3,
+        bound_server_ip = COALESCE(bound_server_ip, $1),
+        bound_fivem_license = COALESCE(bound_fivem_license, $2),
+        bound_resource_name = COALESCE(bound_resource_name, $3),
         bound_at = NOW(),
         updated_at = NOW()
        WHERE id = $4`,
@@ -205,6 +219,33 @@ export async function updateLicenseStatus(licenseId, status) {
   const result = await query(
     `UPDATE licenses SET status = $1, updated_at = NOW() WHERE id = $2 RETURNING *`,
     [status, licenseId]
+  );
+  return result.rows[0] || null;
+}
+
+function isValidIpv4(ip) {
+  const parts = String(ip).trim().split(".");
+  if (parts.length !== 4) return false;
+  return parts.every((p) => {
+    const n = Number(p);
+    return Number.isInteger(n) && n >= 0 && n <= 255;
+  });
+}
+
+/** Admin: lock license to a specific server IP (only you can change it in admin). */
+export async function setLicenseBoundIp(licenseId, serverIp) {
+  const ip = normalizeIp(serverIp);
+  if (!isValidIpv4(ip)) {
+    throw new Error("Invalid IPv4 address");
+  }
+  const result = await query(
+    `UPDATE licenses SET
+      bound_server_ip = $1,
+      bound_at = NOW(),
+      updated_at = NOW()
+     WHERE id = $2
+     RETURNING *`,
+    [ip, licenseId]
   );
   return result.rows[0] || null;
 }

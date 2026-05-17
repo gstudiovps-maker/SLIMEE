@@ -579,6 +579,7 @@
         <td>${L.status}</td>
         <td>${L.bound_server_ip || "—"}</td>
         <td class="admin-row-actions">
+          <button type="button" data-act="setip" data-id="${L.id}" data-ip="${L.bound_server_ip || ""}">Set IP</button>
           <button type="button" data-act="reset" data-id="${L.id}">Reset bind</button>
           <button type="button" data-act="suspend" data-id="${L.id}">Suspend</button>
           <button type="button" data-act="revoke" data-id="${L.id}">Revoke</button>
@@ -592,7 +593,21 @@
       btn.addEventListener("click", async () => {
         const id = btn.dataset.id;
         const act = btn.dataset.act;
-        await apiLicenses(`/${id}/${act === "reset" ? "reset-binding" : act}`, { method: "POST" });
+        if (act === "setip") {
+          const current = btn.dataset.ip || "";
+          const serverIp = window.prompt(
+            "Lock this license to server IPv4 (customer cannot change — use Reset bind to move):",
+            current
+          );
+          if (!serverIp) return;
+          await apiLicenses(`/${id}/set-bound-ip`, {
+            method: "POST",
+            body: JSON.stringify({ serverIp: serverIp.trim() })
+          });
+          showMsg(panelMsg, `License locked to IP ${serverIp.trim()}`, "success");
+        } else {
+          await apiLicenses(`/${id}/${act === "reset" ? "reset-binding" : act}`, { method: "POST" });
+        }
         searchLicenses();
       });
     });

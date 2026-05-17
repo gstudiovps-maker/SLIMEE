@@ -4,6 +4,7 @@ import {
   searchLicenses,
   updateLicenseStatus,
   resetLicenseBinding,
+  setLicenseBoundIp,
   listValidationEvents,
   getAdminStats
 } from "../lib/licenseValidation.js";
@@ -56,6 +57,31 @@ adminLicensesRouter.get("/audit-logs", async (req, res) => {
     return res.json({ logs });
   } catch (err) {
     return res.status(500).json({ error: "Could not load audit logs" });
+  }
+});
+
+adminLicensesRouter.post("/:id/set-bound-ip", async (req, res) => {
+  try {
+    const serverIp = String(req.body?.serverIp || "").trim();
+    if (!serverIp) {
+      return res.status(400).json({ error: "serverIp is required" });
+    }
+    const row = await setLicenseBoundIp(Number(req.params.id), serverIp);
+    if (!row) {
+      return res.status(404).json({ error: "License not found" });
+    }
+    await logAdminActivity({
+      adminUserId: req.admin.id,
+      adminUsername: req.admin.username,
+      action: "license_set_bound_ip",
+      resourceType: "license",
+      resourceId: String(row.id),
+      details: { bound_server_ip: row.bound_server_ip },
+      ipAddress: clientIp(req)
+    });
+    return res.json({ license: row });
+  } catch (err) {
+    return res.status(400).json({ error: err.message || "Could not set IP" });
   }
 });
 

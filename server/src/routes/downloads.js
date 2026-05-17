@@ -278,7 +278,8 @@ export async function downloadFileHandler(req, res) {
     const licenseRow = {
       license_key: row.license_key,
       package_id: packageId,
-      customer_email: row.customer_email
+      customer_email: row.customer_email,
+      bound_server_ip: row.bound_server_ip || null
     };
 
     const protectedZip = buildProtectedPackage(source, pkg, licenseRow);

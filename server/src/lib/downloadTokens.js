@@ -118,7 +118,8 @@ export async function findDownloadToken(tokenValue) {
   });
 
   const licenseResult = await query(
-    `SELECT id, license_key, package_id, customer_email, status
+    `SELECT id, license_key, package_id, customer_email, status,
+            bound_server_ip, bound_fivem_license, bound_resource_name, bound_at
      FROM licenses WHERE id = $1`,
     [dt.license_id]
   );
@@ -143,7 +144,9 @@ export async function findDownloadToken(tokenValue) {
     license_key: license.license_key,
     package_id: license.package_id,
     customer_email: license.customer_email,
-    license_status: license.status
+    license_status: license.status,
+    bound_server_ip: license.bound_server_ip,
+    bound_at: license.bound_at
   };
 }
 
