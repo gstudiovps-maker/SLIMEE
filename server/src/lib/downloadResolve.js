@@ -3,6 +3,7 @@ import { getPackageById } from "./packages.js";
 import { resolvePackageStorageKey } from "./packageStorage.js";
 import { getStorage } from "../storage/index.js";
 import { config } from "../config.js";
+import { INVALID_DOWNLOAD_TOKEN_MESSAGE } from "./downloadConstants.js";
 
 export function buildProtectedStorageKey(packageId, token) {
   const safePackage = String(packageId || "unknown").replace(/[^a-zA-Z0-9_-]/g, "");
@@ -27,8 +28,9 @@ export async function resolveDownloadContext(tokenValue) {
       ok: false,
       status: 404,
       code: "token_not_found",
-      error: "Download link invalid or unknown",
-      tokenFound: false
+      error: INVALID_DOWNLOAD_TOKEN_MESSAGE,
+      tokenFound: false,
+      tokenValid: false
     };
   }
 
@@ -57,9 +59,9 @@ export async function resolveDownloadContext(tokenValue) {
     return {
       ...base,
       ok: false,
-      status: 410,
+      status: 404,
       code: "token_expired",
-      error: "Download link expired"
+      error: INVALID_DOWNLOAD_TOKEN_MESSAGE
     };
   }
 

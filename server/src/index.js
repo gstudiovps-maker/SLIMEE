@@ -4,7 +4,7 @@ import { config, assertConfig } from "./config.js";
 import { checkoutRouter } from "./routes/checkout.js";
 import { webhooksRouter } from "./routes/webhooks.js";
 import { licensesRouter } from "./routes/licenses.js";
-import { downloadsRouter } from "./routes/downloads.js";
+import { registerDownloadsRoutes } from "./routes/downloads.js";
 import { ordersRouter } from "./routes/orders.js";
 import { packagesRouter } from "./routes/packages.js";
 import { adminRouter } from "./routes/admin.js";
@@ -48,11 +48,21 @@ app.use(express.json({ limit: "1mb" }));
 app.use("/api/packages", packagesRouter);
 app.use("/api/checkout", checkoutRouter);
 app.use("/api/licenses", licensesRouter);
-app.use("/api/downloads", downloadsRouter);
+registerDownloadsRoutes(app);
 app.use("/api/orders", ordersRouter);
 app.use("/api/admin", adminRouter);
 app.use("/api/admin/uploads", adminUploadsRouter);
 app.use("/api/admin/licenses", adminLicensesRouter);
+
+app.use((req, res) => {
+  if (req.path.startsWith("/api/")) {
+    return res.status(404).json({
+      error: `API route not found: ${req.method} ${req.originalUrl}`,
+      code: "api_not_found"
+    });
+  }
+  return res.status(404).send("Not Found");
+});
 
 app.use((err, req, res, _next) => {
   if (err.message === "Not allowed by CORS") {
@@ -81,8 +91,5 @@ app.listen(config.port, () => {
   console.log(`Frontend URL: ${config.frontendUrl}`);
   console.log(`API public URL: ${config.apiPublicUrl}`);
   console.log(`Storage provider: ${config.storageProvider}`);
-  console.log(
-    "[downloads] routes: POST /api/downloads/request, GET /api/downloads/file/:token/status, GET /api/downloads/file/:token"
-  );
   bootstrap();
 });
