@@ -51,6 +51,7 @@
       `<a class="nav-social-link" href="${dc}" target="_blank" rel="noopener noreferrer" aria-label="Discord">${ICONS.discord}</a>`,
       `<a class="nav-social-link" href="${tt}" target="_blank" rel="noopener noreferrer" aria-label="TikTok">${ICONS.tiktok}</a>`,
       "</div>",
+      '<div class="nav-customer-auth" data-customer-auth aria-label="Account"></div>',
       `<a class="cart-nav-link${cartActive ? " is-active" : ""}" href="${href("cart")}" data-cart-nav>`,
       ICONS.cart,
       "<span>Cart</span>",
@@ -71,6 +72,39 @@
     });
   }
 
+  function customerAuthScriptUrl() {
+    const prefix = pagesPrefix();
+    return prefix ? `${prefix}/assets/js/customer-auth.js` : "assets/js/customer-auth.js";
+  }
+
+  function ensureCustomerAuth(callback) {
+    if (window.SlimeeCustomerAuth) {
+      callback();
+      return;
+    }
+    const existing = document.querySelector("script[data-slimee-customer-auth]");
+    if (existing) {
+      existing.addEventListener("load", () => callback(), { once: true });
+      return;
+    }
+    const script = document.createElement("script");
+    script.src = customerAuthScriptUrl();
+    script.dataset.slimeeCustomerAuth = "1";
+    script.onload = () => callback();
+    document.head.appendChild(script);
+  }
+
+  function refreshCustomerNav() {
+    if (!window.SlimeeCustomerAuth) return;
+    const auth = window.SlimeeCustomerAuth;
+    const run = () => window.dispatchEvent(new CustomEvent("slimee-customer-auth"));
+    if (auth.getToken()) {
+      auth.fetchProfile().finally(run);
+    } else {
+      run();
+    }
+  }
+
   function init() {
     document.querySelectorAll(".navbar .site-menu, .navbar#site-menu").forEach((menu) => {
       enhanceMenu(menu);
@@ -82,6 +116,7 @@
       }
     });
     syncBadge();
+    ensureCustomerAuth(refreshCustomerNav);
   }
 
   window.addEventListener("slimee-cart-updated", syncBadge);

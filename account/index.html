@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow">
+  <title>My Purchases | Slimee Store</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../assets/css/styles.css">
+  <link rel="stylesheet" href="../assets/css/admin-dashboard.css">
+  <link rel="stylesheet" href="../assets/css/customer-dashboard.css">
+</head>
+<body class="page-customer-account">
+  <div id="customer-login-screen" class="customer-login-screen">
+    <section class="admin-login-card customer-login-card">
+      <h1>My Purchases</h1>
+      <p>Sign in with Discord to view your license keys and re-download packages you own.</p>
+      <p id="customer-login-msg" class="admin-msg is-error" hidden role="alert"></p>
+      <a id="customer-discord-login" class="customer-discord-btn" href="#">Sign in with Discord</a>
+      <p class="customer-login-hint">Use the same email on Discord that you used at checkout so past orders link automatically.</p>
+    </section>
+  </div>
+
+  <div id="customer-app" class="admin-app customer-app" hidden>
+    <aside class="admin-sidebar">
+      <div class="admin-brand">
+        <strong>Slimee Store</strong>
+        <small>Customer panel</small>
+      </div>
+      <nav class="admin-nav">
+        <button type="button" class="is-active" disabled>My purchases</button>
+      </nav>
+      <div class="customer-sidebar-user">
+        <img id="customer-sidebar-avatar" class="customer-sidebar-avatar" width="40" height="40" alt="" />
+        <div>
+          <strong id="customer-sidebar-name">—</strong>
+          <small id="customer-sidebar-email">—</small>
+        </div>
+      </div>
+      <button type="button" class="admin-btn-ghost" id="customer-logout" style="width:100%">Log out</button>
+    </aside>
+
+    <main class="admin-main">
+      <div class="admin-topbar">
+        <h1>My purchases</h1>
+      </div>
+      <p id="customer-panel-msg" class="admin-msg" hidden role="status"></p>
+
+      <div class="admin-panel-card">
+        <p class="customer-table-hint">Download a fresh protected copy of any package you own. Keys are tied to your server IP on first start.</p>
+        <div class="admin-table-wrap">
+          <table class="admin-table" id="customer-licenses-table">
+            <thead>
+              <tr>
+                <th>Key</th>
+                <th>Package</th>
+                <th>Email</th>
+                <th>Status</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="customer-licenses-body">
+              <tr><td colspan="5" class="customer-empty">Loading…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script>window.STORE_REPO_PREFIX = "..";</script>
+  <script src="../assets/js/paths.js"></script>
+  <script src="../assets/js/config.js"></script>
+  <script src="../assets/js/customer-auth.js"></script>
+  <script src="../assets/js/account.js"></script>
+</body>
+</html>
