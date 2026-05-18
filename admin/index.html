@@ -125,9 +125,51 @@
               <textarea id="pkg-escrow-ignore" rows="6" placeholder="config/*.lua&#10;shared/utils/*.lua"></textarea>
             </label>
             <label class="admin-field"><span>Tags (comma separated)</span><input id="pkg-tags" /></label>
-            <label class="admin-field"><span>Detail sections JSON</span><textarea id="pkg-detail-sections" rows="4">[]</textarea></label>
-            <label class="admin-field" style="flex-direction:row;align-items:center;gap:0.5rem"><input id="pkg-featured" type="checkbox" /><span>Featured</span></label>
-            <label class="admin-field" style="flex-direction:row;align-items:center;gap:0.5rem"><input id="pkg-published" type="checkbox" checked /><span>Published</span></label>
+            <label class="admin-field"><span>Detail intro</span>
+              <textarea id="pkg-detail-intro" rows="2" placeholder="Short lead paragraph on the product page"></textarea>
+            </label>
+            <label class="admin-field"><span>Video preview URL</span>
+              <input id="pkg-video-url" type="url" placeholder="YouTube, or direct .mp4 / Catbox link" />
+              <small class="admin-field-hint">YouTube watch/embed links, or direct MP4/WebM (e.g. files.catbox.moe).</small>
+            </label>
+            <div class="admin-field">
+              <span>Product images</span>
+              <p class="admin-field-hint" style="margin:0 0 0.5rem">Upload to your server (Render/R2). First image can be used as the shop card.</p>
+              <div class="admin-media-dropzone" id="pkg-media-dropzone">
+                <p><strong>Drag & drop</strong> images here</p>
+                <p>or <label class="admin-browse-link">browse<input type="file" id="pkg-media-input" accept="image/jpeg,image/png,image/webp,image/gif" multiple /></label></p>
+              </div>
+              <ul id="pkg-gallery-list" class="admin-gallery-list" aria-label="Gallery images"></ul>
+              <label class="admin-field" style="margin-top:0.75rem"><span>Card image URL</span>
+                <input id="pkg-card-image" type="url" placeholder="Auto-filled when you set as card" />
+              </label>
+              <button type="button" class="admin-btn-ghost" id="pkg-use-first-card" style="width:auto;margin-top:0.35rem">Use first gallery image as card</button>
+            </div>
+            <label class="admin-field">
+              <span>Detail sections JSON</span>
+              <div class="admin-json-toolbar">
+                <button type="button" class="admin-btn-ghost" id="pkg-json-template" style="width:auto;margin:0">Reset to default template</button>
+              </div>
+              <textarea id="pkg-detail-sections" rows="12" spellcheck="false"></textarea>
+            </label>
+            <div class="admin-toggle-row">
+              <label class="admin-toggle">
+                <span class="admin-toggle-label">
+                  <strong>Featured</strong>
+                  <small>Highlight on the storefront</small>
+                </span>
+                <input id="pkg-featured" type="checkbox" />
+                <span class="admin-toggle-track" aria-hidden="true"></span>
+              </label>
+              <label class="admin-toggle">
+                <span class="admin-toggle-label">
+                  <strong>Published</strong>
+                  <small>Visible in the shop catalog</small>
+                </span>
+                <input id="pkg-published" type="checkbox" checked />
+                <span class="admin-toggle-track" aria-hidden="true"></span>
+              </label>
+            </div>
             <div class="admin-editor-actions">
               <button type="submit" class="admin-btn-primary">Save product</button>
               <button type="button" class="admin-btn-ghost" id="admin-editor-cancel" style="width:auto;margin:0">Cancel</button>
@@ -191,6 +233,7 @@
 
   <script>window.STORE_REPO_PREFIX = "..";</script>
   <script src="../assets/js/config.js"></script>
+  <script src="../assets/js/package-editor-defaults.js"></script>
   <script src="../assets/js/admin.js"></script>
 </body>
 </html>

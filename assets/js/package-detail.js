@@ -36,6 +36,17 @@
     return `https://www.youtube.com/embed/${id}?rel=0`;
   }
 
+  function isDirectVideoUrl(url) {
+    if (!url || typeof url !== "string") {
+      return false;
+    }
+    const u = url.trim().toLowerCase();
+    if (/\.(mp4|webm|mov|m4v)(\?|#|$)/i.test(u)) {
+      return true;
+    }
+    return u.includes("catbox.moe") || u.includes("files.catbox");
+  }
+
   function showToast(message) {
     if (!checkoutToast) {
       return;
@@ -108,7 +119,9 @@
   function renderProduct(pkg) {
     const idx = packages.indexOf(pkg);
     const images = buildGalleryList(pkg, idx);
-    const videoId = youTubeVideoId(pkg.videoPreviewUrl);
+    const videoUrl = String(pkg.videoPreviewUrl || "").trim();
+    const videoId = youTubeVideoId(videoUrl);
+    const directVideo = !videoId && isDirectVideoUrl(videoUrl);
     const watchUrl = videoId ? youTubeWatchUrl(videoId) : "";
     const embedUrl = videoId ? youTubeEmbedUrl(videoId) : "";
     const priceLine = `${escapeHtml(pkg.priceAmount || pkg.price.replace(/[^0-9.]/g, "") || "0")} ${escapeHtml(pkg.currency || "USD")}`;
@@ -145,14 +158,15 @@
             <button type="button" class="product-gallery-nav product-gallery-next" aria-label="Next image">&#8250;</button>
             <div class="product-gallery-frame">
               <img class="product-gallery-image" src="${escapeHtml(images[0])}" alt="" width="960" height="540" decoding="async" />
-              ${videoId ? `
+              ${videoId || directVideo ? `
               <button type="button" class="product-video-play" aria-label="Play video preview in page">
                 <span class="product-video-play-icon" aria-hidden="true">&#9654;</span>
               </button>
-              <a class="product-video-yt-link" href="${escapeHtml(watchUrl)}" target="_blank" rel="noopener noreferrer">Watch on YouTube</a>
+              ${videoId ? `<a class="product-video-yt-link" href="${escapeHtml(watchUrl)}" target="_blank" rel="noopener noreferrer">Watch on YouTube</a>` : `<a class="product-video-yt-link" href="${escapeHtml(videoUrl)}" target="_blank" rel="noopener noreferrer">Open video</a>`}
               ` : ""}
             </div>
             ${videoId ? `<div class="product-video-embed-wrap" hidden><iframe class="product-video-iframe" title="Video preview" width="960" height="540" src="" data-embed-src="${escapeHtml(embedUrl)}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy"></iframe><button type="button" class="product-video-close button button-secondary">Close video</button></div>` : ""}
+            ${directVideo ? `<div class="product-video-embed-wrap product-video-embed-wrap--file" hidden><video class="product-video-mp4" controls playsinline preload="metadata" src="${escapeHtml(videoUrl)}"></video><button type="button" class="product-video-close button button-secondary">Close video</button></div>` : ""}
           </div>
           <div class="product-gallery-thumbs" role="tablist" aria-label="Gallery images">
             ${images
@@ -197,9 +211,10 @@
     const prevBtn = root.querySelector(".product-gallery-prev");
     const nextBtn = root.querySelector(".product-gallery-next");
     const playBtn = root.querySelector(".product-video-play");
-    const embedWrap = root.querySelector(".product-video-embed-wrap");
+    const embedWraps = [...root.querySelectorAll(".product-video-embed-wrap")];
     const iframe = root.querySelector(".product-video-iframe");
-    const closeVideo = root.querySelector(".product-video-close");
+    const mp4 = root.querySelector(".product-video-mp4");
+    const closeVideoBtns = [...root.querySelectorAll(".product-video-close")];
 
     function setActive(i) {
       const n = images.length;
@@ -216,23 +231,33 @@
     });
 
     playBtn?.addEventListener("click", () => {
-      if (!embedWrap || !iframe) {
+      if (videoId && iframe) {
+        const wrap = iframe.closest(".product-video-embed-wrap");
+        const src = iframe.dataset.embedSrc;
+        if (src) {
+          iframe.src = src + (src.includes("?") ? "&" : "?") + "autoplay=1";
+        }
+        if (wrap) wrap.hidden = false;
         return;
       }
-      const src = iframe.dataset.embedSrc;
-      if (src) {
-        iframe.src = src + (src.includes("?") ? "&" : "?") + "autoplay=1";
+      if (directVideo && mp4) {
+        const wrap = mp4.closest(".product-video-embed-wrap");
+        mp4.play().catch(() => {});
+        if (wrap) wrap.hidden = false;
       }
-      embedWrap.hidden = false;
     });
 
-    closeVideo?.addEventListener("click", () => {
-      if (iframe) {
-        iframe.src = "";
-      }
-      if (embedWrap) {
-        embedWrap.hidden = true;
-      }
+    closeVideoBtns.forEach((btn) => {
+      btn.addEventListener("click", () => {
+        if (iframe) iframe.src = "";
+        if (mp4) {
+          mp4.pause();
+          mp4.currentTime = 0;
+        }
+        embedWraps.forEach((w) => {
+          w.hidden = true;
+        });
+      });
     });
 
     root.querySelector(".product-add-cart")?.addEventListener("click", async () => {

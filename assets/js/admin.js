@@ -25,8 +25,82 @@
   let editorMode = null;
   let productListMode = null;
   let currentView = "dashboard";
+  let editorGallery = [];
 
   const productGrid = document.getElementById("admin-product-grid");
+
+  function packageDefaults() {
+    return (
+      window.SLIMEE_PACKAGE_DEFAULTS || {
+        detailIntro: "",
+        detailSections: [],
+        escrowIgnore: ["config/*.lua", "shared/utils/*.lua"],
+        tags: [],
+        gallery: [],
+        videoPreviewUrl: "",
+        cardImage: ""
+      }
+    );
+  }
+
+  function escapeAttr(s) {
+    return String(s || "")
+      .replace(/&/g, "&amp;")
+      .replace(/"/g, "&quot;")
+      .replace(/</g, "&lt;");
+  }
+
+  function applyDetailJsonTemplate() {
+    const el = document.getElementById("pkg-detail-sections");
+    if (!el) return;
+    el.value = JSON.stringify(packageDefaults().detailSections, null, 2);
+  }
+
+  function renderGalleryList() {
+    const list = document.getElementById("pkg-gallery-list");
+    if (!list) return;
+    const packageId = selectedId || document.getElementById("pkg-id")?.value?.trim();
+    if (!editorGallery.length) {
+      list.innerHTML = `<li class="admin-gallery-empty">${
+        packageId
+          ? "No images yet — drag files above or browse."
+          : "Save the product first, then upload images."
+      }</li>`;
+      return;
+    }
+    list.innerHTML = editorGallery
+      .map(
+        (url, i) => `
+      <li class="admin-gallery-item">
+        <img src="${escapeAttr(url)}" alt="" loading="lazy" />
+        <div class="admin-gallery-actions">
+          <button type="button" class="admin-btn-ghost" data-gallery-card="${i}" style="width:auto;margin:0;padding:0.35rem 0.5rem;font-size:0.72rem">Set card</button>
+          <button type="button" class="admin-btn-danger" data-gallery-remove="${i}" style="width:auto;margin:0;padding:0.35rem 0.5rem;font-size:0.72rem">Remove</button>
+        </div>
+      </li>`
+      )
+      .join("");
+
+    list.querySelectorAll("[data-gallery-remove]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const idx = Number(btn.dataset.galleryRemove);
+        const removed = editorGallery[idx];
+        editorGallery.splice(idx, 1);
+        const cardEl = document.getElementById("pkg-card-image");
+        if (cardEl && cardEl.value === removed) {
+          cardEl.value = editorGallery[0] || "";
+        }
+        renderGalleryList();
+      });
+    });
+    list.querySelectorAll("[data-gallery-card]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const idx = Number(btn.dataset.galleryCard);
+        const url = editorGallery[idx];
+        if (url) document.getElementById("pkg-card-image").value = url;
+      });
+    });
+  }
 
   function apiBase() {
     return (window.STORE_CONFIG?.apiBaseUrl || "").replace(/\/$/, "");
@@ -216,6 +290,10 @@
       featured: document.getElementById("pkg-featured").checked,
       published: document.getElementById("pkg-published").checked,
       tags: parseTags(document.getElementById("pkg-tags").value),
+      detailIntro: document.getElementById("pkg-detail-intro")?.value.trim() || "",
+      videoPreviewUrl: document.getElementById("pkg-video-url")?.value.trim() || "",
+      cardImage: document.getElementById("pkg-card-image")?.value.trim() || "",
+      gallery: [...editorGallery],
       detailSections
     };
   }
@@ -308,6 +386,8 @@
 
   function fillEditor(pkg, mode) {
     const p = pkg || {};
+    const defs = packageDefaults();
+    editorGallery = Array.isArray(p.gallery) ? [...p.gallery] : [];
     document.getElementById("pkg-id").value = p.id || "";
     document.getElementById("pkg-name").value = p.name || "";
     document.getElementById("pkg-category").value = p.category || "Scripts";
@@ -315,11 +395,27 @@
     document.getElementById("pkg-currency").value = p.currency || "USD";
     document.getElementById("pkg-description").value = p.description || "";
     document.getElementById("pkg-protection-mode").value = p.protectionMode || "partial";
-    document.getElementById("pkg-escrow-ignore").value = (p.escrowIgnore || []).join("\n");
+    document.getElementById("pkg-escrow-ignore").value = (p.escrowIgnore || defs.escrowIgnore || []).join("\n");
     document.getElementById("pkg-featured").checked = Boolean(p.featured);
     document.getElementById("pkg-published").checked = p.published !== false;
     document.getElementById("pkg-tags").value = (p.tags || []).join(", ");
-    document.getElementById("pkg-detail-sections").value = JSON.stringify(p.detailSections || [], null, 2);
+    if (document.getElementById("pkg-detail-intro")) {
+      document.getElementById("pkg-detail-intro").value = p.detailIntro || "";
+    }
+    if (document.getElementById("pkg-video-url")) {
+      document.getElementById("pkg-video-url").value = p.videoPreviewUrl || "";
+    }
+    if (document.getElementById("pkg-card-image")) {
+      document.getElementById("pkg-card-image").value = p.cardImage || "";
+    }
+    const sections =
+      Array.isArray(p.detailSections) && p.detailSections.length
+        ? p.detailSections
+        : mode === "create"
+          ? defs.detailSections
+          : [];
+    document.getElementById("pkg-detail-sections").value = JSON.stringify(sections, null, 2);
+    renderGalleryList();
     if (mode === "edit") {
       selectedId = p.id || null;
     } else if (mode !== "create") {
@@ -517,19 +613,96 @@
   btnCreate?.addEventListener("click", () => {
     hideProductGrid();
     selectedId = null;
+    const defs = packageDefaults();
     openEditor("create", {
       name: "New Package",
       category: "Scripts",
       priceAmount: "9.99",
       currency: "USD",
+      description: "",
       protectionMode: "partial",
-      escrowIgnore: [],
+      escrowIgnore: defs.escrowIgnore || [],
       published: false,
       featured: false,
-      tags: [],
-      detailSections: []
+      tags: defs.tags || [],
+      detailIntro: defs.detailIntro || "",
+      videoPreviewUrl: defs.videoPreviewUrl || "",
+      cardImage: defs.cardImage || "",
+      gallery: defs.gallery || [],
+      detailSections: defs.detailSections || []
     });
     updateProductToolbar();
+  });
+
+  document.getElementById("pkg-json-template")?.addEventListener("click", () => {
+    applyDetailJsonTemplate();
+    showMsg(panelMsg, "Detail sections reset to default template.", "success");
+  });
+
+  document.getElementById("pkg-use-first-card")?.addEventListener("click", () => {
+    if (!editorGallery[0]) {
+      showMsg(panelMsg, "Upload at least one gallery image first.", "error");
+      return;
+    }
+    document.getElementById("pkg-card-image").value = editorGallery[0];
+    showMsg(panelMsg, "Card image set from gallery.", "success");
+  });
+
+  async function uploadMediaFile(file) {
+    const packageId = selectedId || document.getElementById("pkg-id")?.value?.trim();
+    if (!packageId) {
+      showMsg(panelMsg, "Save the product first before uploading images.", "error");
+      return;
+    }
+    const fd = new FormData();
+    fd.append("image", file);
+    const base = apiBase();
+    const res = await fetch(`${base}/api/admin/uploads/${encodeURIComponent(packageId)}/media`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${getToken()}` },
+      body: fd
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || "Image upload failed");
+    if (data.url) {
+      editorGallery.push(data.url);
+      if (!document.getElementById("pkg-card-image").value) {
+        document.getElementById("pkg-card-image").value = data.url;
+      }
+      renderGalleryList();
+    }
+    return data;
+  }
+
+  async function uploadMediaFiles(files) {
+    for (const file of files) {
+      await uploadMediaFile(file);
+    }
+    showMsg(panelMsg, "Images uploaded — click Save product to store gallery URLs.", "success");
+  }
+
+  const mediaDropzone = document.getElementById("pkg-media-dropzone");
+  const mediaInput = document.getElementById("pkg-media-input");
+
+  mediaDropzone?.addEventListener("dragover", (e) => {
+    e.preventDefault();
+    mediaDropzone.classList.add("is-dragover");
+  });
+  mediaDropzone?.addEventListener("dragleave", () => mediaDropzone.classList.remove("is-dragover"));
+  mediaDropzone?.addEventListener("drop", (e) => {
+    e.preventDefault();
+    mediaDropzone.classList.remove("is-dragover");
+    const files = [...(e.dataTransfer?.files || [])].filter((f) => f.type.startsWith("image/"));
+    if (files.length) {
+      uploadMediaFiles(files).catch((err) => showMsg(panelMsg, err.message, "error"));
+    }
+  });
+  mediaInput?.addEventListener("change", () => {
+    const files = [...(mediaInput.files || [])];
+    if (files.length) {
+      uploadMediaFiles(files).catch((err) => showMsg(panelMsg, err.message, "error"));
+    }
+    mediaInput.value = "";
   });
 
   btnEdit?.addEventListener("click", () => {

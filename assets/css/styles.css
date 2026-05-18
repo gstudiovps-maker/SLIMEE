@@ -1881,6 +1881,17 @@ body.page-package .product-page-main {
   border-radius: 8px;
 }
 
+.product-video-mp4 {
+  flex: 1;
+  width: 100%;
+  min-height: 0;
+  max-height: 100%;
+  border: 0;
+  border-radius: 8px;
+  background: #000;
+  object-fit: contain;
+}
+
 .product-video-close {
   align-self: flex-end;
 }
