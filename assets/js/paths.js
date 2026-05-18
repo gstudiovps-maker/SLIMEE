@@ -17,6 +17,10 @@
       .replace(/\.html$/i, "")
       .replace(/\/$/, "");
 
+    if (!slug || slug === "home") {
+      return prefix ? `${prefix}/` : "/";
+    }
+
     let url;
     if (prefix) {
       url = `${prefix}/${slug}/`;

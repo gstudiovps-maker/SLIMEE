@@ -193,6 +193,33 @@
   white-space: nowrap;
 }
 
+.page-customer-account .customer-back-store {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 42px;
+  margin-bottom: 0.5rem;
+  padding: 0.65rem 0.75rem;
+  border-radius: 10px;
+  border: 1px solid rgba(161, 255, 98, 0.35);
+  color: var(--admin-accent);
+  font-weight: 700;
+  font-size: 0.88rem;
+  text-decoration: none;
+  background: rgba(161, 255, 98, 0.08);
+  transition: background 160ms ease, border-color 160ms ease;
+}
+
+.page-customer-account .customer-back-store:hover {
+  background: rgba(161, 255, 98, 0.16);
+  border-color: rgba(161, 255, 98, 0.55);
+}
+
+.page-customer-account .customer-back-store--login {
+  margin-bottom: 0.75rem;
+}
+
 @media (max-width: 1000px) {
   .page-customer-account.is-customer-authed .customer-app {
     grid-template-columns: 1fr;
