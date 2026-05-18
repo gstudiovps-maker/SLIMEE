@@ -4,6 +4,11 @@ import { config } from "../config.js";
 import { requireAdmin } from "../middleware/adminAuth.js";
 import { getPackageById } from "../lib/packages.js";
 import { buildSourceStorageKey, getStorage } from "../storage/index.js";
+import {
+  buildPackageMediaPublicUrl,
+  buildPackageMediaStorageKey,
+  isAllowedMediaExtension
+} from "../lib/packageMedia.js";
 import { upsertPackageSourceFile, getPackageSourceFile } from "../lib/packageFiles.js";
 import { logAdminActivity } from "../lib/adminLog.js";
 
@@ -12,6 +17,11 @@ export const adminUploadsRouter = express.Router();
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: config.maxUploadMb * 1024 * 1024 }
+});
+
+const imageUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 12 * 1024 * 1024 }
 });
 
 function clientIp(req) {
@@ -75,6 +85,58 @@ adminUploadsRouter.post(
         return res.status(413).json({ error: `ZIP exceeds ${config.maxUploadMb}MB limit` });
       }
       return res.status(500).json({ error: "Upload failed" });
+    }
+  }
+);
+
+adminUploadsRouter.post(
+  "/:packageId/media",
+  requireAdmin,
+  imageUpload.single("image"),
+  async (req, res) => {
+    try {
+      const packageId = String(req.params.packageId || "").trim();
+      const pkg = await getPackageById(packageId, { publishedOnly: false, bypassCache: true });
+      if (!pkg) {
+        return res.status(404).json({ error: "Package not found" });
+      }
+      if (!req.file?.buffer?.length) {
+        return res.status(400).json({ error: "image file is required (field name: image)" });
+      }
+      const name = req.file.originalname || "image.jpg";
+      if (!isAllowedMediaExtension(name)) {
+        return res.status(400).json({ error: "Allowed types: JPG, PNG, WebP, GIF" });
+      }
+
+      const storageKey = buildPackageMediaStorageKey(packageId, name);
+      await getStorage().saveFromBuffer(storageKey, req.file.buffer);
+      const filename = storageKey.split("/").pop();
+      const url = buildPackageMediaPublicUrl(req, packageId, filename);
+
+      await logAdminActivity({
+        adminUserId: req.admin.id,
+        adminUsername: req.admin.username,
+        action: "package_media_upload",
+        resourceType: "package",
+        resourceId: packageId,
+        details: { byteSize: req.file.size, filename },
+        ipAddress: clientIp(req)
+      });
+
+      return res.json({
+        ok: true,
+        packageId,
+        url,
+        storageKey,
+        filename,
+        byteSize: req.file.size
+      });
+    } catch (err) {
+      console.error("[admin media upload]", err);
+      if (err.code === "LIMIT_FILE_SIZE") {
+        return res.status(413).json({ error: "Image exceeds 12MB limit" });
+      }
+      return res.status(500).json({ error: "Image upload failed" });
     }
   }
 );
