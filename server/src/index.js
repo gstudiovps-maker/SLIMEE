@@ -10,10 +10,13 @@ import { packagesRouter } from "./routes/packages.js";
 import { adminRouter } from "./routes/admin.js";
 import { adminUploadsRouter } from "./routes/adminUploads.js";
 import { adminLicensesRouter } from "./routes/adminLicenses.js";
+import { discordAuthRouter } from "./routes/discordAuth.js";
+import { accountRouter } from "./routes/account.js";
 import { seedAdminsFromEnv } from "./lib/adminSeed.js";
 import { seedPackagesFromJsonIfEmpty } from "./lib/packages.js";
 import { logAdminStartupDiagnostics } from "./lib/adminAuthLog.js";
 import { ensureDownloadTokensTable } from "./lib/ensureDownloadTokens.js";
+import { ensureCustomersSchema } from "./lib/ensureCustomers.js";
 
 assertConfig();
 
@@ -49,6 +52,8 @@ app.use(express.json({ limit: "1mb" }));
 app.use("/api/packages", packagesRouter);
 app.use("/api/checkout", checkoutRouter);
 app.use("/api/licenses", licensesRouter);
+app.use("/api/auth", discordAuthRouter);
+app.use("/api/account", accountRouter);
 registerDownloadsRoutes(app);
 app.use("/api/orders", ordersRouter);
 app.use("/api/admin", adminRouter);
@@ -79,6 +84,7 @@ app.use((err, req, res, _next) => {
 async function bootstrap() {
   try {
     await ensureDownloadTokensTable();
+    await ensureCustomersSchema();
     await logAdminStartupDiagnostics();
     await seedPackagesFromJsonIfEmpty();
     await seedAdminsFromEnv();

@@ -120,7 +120,12 @@ ordersRouter.get("/session/:sessionId", async (req, res) => {
 
     }
 
-
+    if (email) {
+      const { linkLicensesForCheckoutEmail } = await import("../lib/customers.js");
+      const { syncRolesAfterPurchase } = await import("../lib/discordRoleSync.js");
+      await linkLicensesForCheckoutEmail(email);
+      await syncRolesAfterPurchase(email);
+    }
 
     const rows = await findLicensesByStripeSession(session.id);
 

@@ -122,6 +122,8 @@ webhooksRouter.post(
 
 
 
+        const { linkLicensesForCheckoutEmail } = await import("../lib/customers.js");
+
         for (const packageId of ids) {
 
           await createLicense({
@@ -138,6 +140,12 @@ webhooksRouter.post(
 
           console.log("[webhook] License ensured for", packageId, session.id);
 
+        }
+
+        if (email) {
+          await linkLicensesForCheckoutEmail(email);
+          const { syncRolesAfterPurchase } = await import("../lib/discordRoleSync.js");
+          await syncRolesAfterPurchase(email);
         }
 
       }

@@ -42,6 +42,18 @@ export const config = {
   ),
   jwtSecret: process.env.JWT_SECRET || "",
   jwtExpiresIn: process.env.JWT_EXPIRES_IN || "12h",
+  customerJwtExpiresIn: process.env.CUSTOMER_JWT_EXPIRES_IN || "30d",
+  discord: {
+    clientId: process.env.DISCORD_CLIENT_ID || "",
+    clientSecret: process.env.DISCORD_CLIENT_SECRET || "",
+    redirectUri:
+      process.env.DISCORD_REDIRECT_URI ||
+      `${(process.env.API_PUBLIC_URL || `http://localhost:${process.env.PORT || 3001}`).replace(/\/+$/, "").replace(/\/api$/i, "")}/api/auth/discord/callback`,
+    botToken: process.env.DISCORD_BOT_TOKEN || "",
+    guildId: process.env.DISCORD_GUILD_ID || "",
+    verifiedRoleId: process.env.DISCORD_VERIFIED_ROLE_ID || "",
+    customerRoleId: process.env.DISCORD_CUSTOMER_ROLE_ID || ""
+  },
   mainAdminUsername: (process.env.MAIN_ADMIN_USERNAME || "").trim().toLowerCase(),
   mainAdminPasswordHash: process.env.MAIN_ADMIN_PASSWORD_HASH || "",
   admin2Username: (process.env.ADMIN2_USERNAME || "").trim().toLowerCase(),
