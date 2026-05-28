@@ -51,8 +51,16 @@ export const config = {
       `${(process.env.API_PUBLIC_URL || `http://localhost:${process.env.PORT || 3001}`).replace(/\/+$/, "").replace(/\/api$/i, "")}/api/auth/discord/callback`,
     botToken: process.env.DISCORD_BOT_TOKEN || "",
     guildId: process.env.DISCORD_GUILD_ID || "",
+    inviteUrl: process.env.DISCORD_INVITE_URL || "",
     verifiedRoleId: process.env.DISCORD_VERIFIED_ROLE_ID || "",
     customerRoleId: process.env.DISCORD_CUSTOMER_ROLE_ID || ""
+  },
+  server: {
+    fivemCode: (process.env.FIVEM_SERVER_CODE || "amor5e").trim(),
+    connectUrl: (
+      process.env.SERVER_CONNECT_URL ||
+      `https://cfx.re/join/${(process.env.FIVEM_SERVER_CODE || "amor5e").trim()}`
+    ).trim()
   },
   mainAdminUsername: (process.env.MAIN_ADMIN_USERNAME || "").trim().toLowerCase(),
   mainAdminPasswordHash: process.env.MAIN_ADMIN_PASSWORD_HASH || "",
