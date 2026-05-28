@@ -109,17 +109,17 @@
             <div class="hero-meta-row">
               <div class="hero-meta-card glass-card">
                 <span class="hero-meta-label">Top customer</span>
-                <strong class="hero-meta-name">YourName</strong>
+                <strong class="hero-meta-name" data-top-customer>YourName</strong>
               </div>
-              <a class="hero-meta-card hero-meta-discord glass-card" href="#">
+              <a class="hero-meta-card hero-meta-discord glass-card" href="#" data-discord-invite>
                 <span class="hero-meta-label">Join Discord</span>
                 <span class="hero-meta-sub">Join our community</span>
-                <span class="hero-meta-online"><span class="online-dot" aria-hidden="true"></span> 5000 users online</span>
+                <span class="hero-meta-online"><span class="online-dot" aria-hidden="true"></span> <span data-discord-online>5000 users online</span></span>
               </a>
             </div>
             <div class="hero-actions hero-actions-hero">
               <a class="button hero-btn-primary" href="scripts/">Browse scripts <span aria-hidden="true">&#8594;</span></a>
-              <a class="button hero-btn-outline" href="#">Connect to server <span aria-hidden="true">&#9654;</span></a>
+              <a class="button hero-btn-outline" href="https://cfx.re/join/amor5e" data-server-connect>Connect to server <span data-server-players hidden></span><span aria-hidden="true">&#9654;</span></a>
             </div>
             <div class="hero-tags hero-tags-hero" aria-label="Supported frameworks">
               <span>QBCore</span>
@@ -147,9 +147,9 @@
         <aside class="payments-card glass-card reveal-on-scroll">
           <div class="panel-heading">
             <span>Recent Payments</span>
-            <small>Live-style placeholders</small>
+            <small>Live from the store</small>
           </div>
-          <div class="payment-list">
+          <div class="payment-list" data-recent-payments>
             <div>
               <strong>KingCashflow</strong>
               <span>Advanced Job System</span>
@@ -222,7 +222,7 @@
           <h2>Follow the latest updates</h2>
           <p>Connect your socials here for release clips, support updates, and preview videos.</p>
           <div class="social-buttons">
-            <a href="#">Discord</a>
+            <a href="#" data-discord-invite>Discord</a>
             <a href="#">TikTok</a>
             <a href="#">YouTube</a>
           </div>
@@ -273,7 +273,7 @@
           <a href="maps/">Maps</a>
           <a href="about/">About</a>
           <a href="faq/">FAQ</a>
-          <a href="#">Discord</a>
+          <a href="#" data-discord-invite>Discord</a>
         </div>
       </footer>
     </div>
@@ -288,5 +288,6 @@
   <script src="assets/js/nav-enhance.js"></script>
   <script src="assets/js/checkout.js"></script>
   <script src="assets/js/main.js"></script>
+  <script src="assets/js/home-stats.js"></script>
 </body>
 </html>
