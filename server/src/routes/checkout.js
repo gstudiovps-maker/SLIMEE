@@ -6,9 +6,39 @@ import { config } from "../config.js";
 
 import { getPackageById, getStripeUnitAmount } from "../lib/packages.js";
 
+import { verifyCustomerToken } from "../lib/customerAuth.js";
+
+import { findCustomerByDiscordId } from "../lib/customers.js";
+
 
 
 const stripe = config.stripeSecretKey ? new Stripe(config.stripeSecretKey) : null;
+
+
+
+async function customerFromRequest(req) {
+
+  const header = req.headers.authorization || "";
+
+  const token = header.startsWith("Bearer ") ? header.slice(7) : "";
+
+  if (!token) {
+
+    return null;
+
+  }
+
+  const payload = verifyCustomerToken(token);
+
+  if (!payload) {
+
+    return null;
+
+  }
+
+  return findCustomerByDiscordId(payload.discordId);
+
+}
 
 
 
@@ -23,6 +53,22 @@ checkoutRouter.post("/", async (req, res) => {
     if (!stripe) {
 
       return res.status(503).json({ error: "Stripe is not configured on the server." });
+
+    }
+
+
+
+    const customer = await customerFromRequest(req);
+
+    if (!customer) {
+
+      return res.status(401).json({
+
+        error: "Please sign in with Discord before purchasing so your assets are linked to your account.",
+
+        code: "login_required"
+
+      });
 
     }
 
@@ -132,11 +178,15 @@ checkoutRouter.post("/", async (req, res) => {
 
       line_items: lineItems,
 
+      customer_email: customer.discord_email || undefined,
+
       metadata: {
 
         packageIds: JSON.stringify(ids),
 
-        packageId: ids.length === 1 ? ids[0] : ""
+        packageId: ids.length === 1 ? ids[0] : "",
+
+        discordId: String(customer.discord_id)
 
       },
 

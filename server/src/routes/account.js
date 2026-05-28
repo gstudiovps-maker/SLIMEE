@@ -2,7 +2,8 @@ import express from "express";
 import { requireCustomer } from "../middleware/customerAuth.js";
 import {
   customerPublicProfile,
-  listLicensesForCustomer
+  listLicensesForCustomer,
+  linkLicensesToCustomer
 } from "../lib/customers.js";
 import { getPackageById } from "../lib/packages.js";
 import { downloadRequestHandler } from "./downloads.js";
@@ -17,7 +18,14 @@ accountRouter.get("/me", requireCustomer, (req, res) => {
 
 accountRouter.get("/licenses", requireCustomer, async (req, res) => {
   try {
-    const rows = await listLicensesForCustomer(req.customer.discord_id);
+    // Stamp this account's Discord ID onto any unlinked licenses that share the email.
+    await linkLicensesToCustomer(req.customer).catch((err) =>
+      console.warn("[account/licenses] link failed:", err.message)
+    );
+    const rows = await listLicensesForCustomer(
+      req.customer.discord_id,
+      req.customer.discord_email
+    );
     const licenses = await Promise.all(
       rows.map(async (row) => {
         const pkg = await getPackageById(row.package_id);
@@ -48,7 +56,10 @@ accountRouter.post("/licenses/:licenseId/download", requireCustomer, async (req,
       return res.status(400).json({ error: "Invalid license id" });
     }
 
-    const rows = await listLicensesForCustomer(req.customer.discord_id);
+    const rows = await listLicensesForCustomer(
+      req.customer.discord_id,
+      req.customer.discord_email
+    );
     const license = rows.find((r) => r.id === licenseId);
     if (!license) {
       return res.status(404).json({ error: "Purchase not found on this account" });

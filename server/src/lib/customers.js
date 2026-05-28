@@ -89,13 +89,15 @@ export async function linkLicensesToCustomer(customer) {
   return res.rowCount || 0;
 }
 
-export async function listLicensesForCustomer(discordId) {
+export async function listLicensesForCustomer(discordId, email) {
   const res = await query(
     `SELECT id, license_key, package_id, customer_email, status, bound_server_ip, created_at
      FROM licenses
      WHERE discord_id = $1
+        OR (discord_id IS NULL AND $2 <> '' AND customer_email IS NOT NULL
+            AND LOWER(TRIM(customer_email)) = LOWER(TRIM($2)))
      ORDER BY created_at DESC`,
-    [String(discordId)]
+    [String(discordId || ""), String(email || "")]
   );
   return res.rows;
 }

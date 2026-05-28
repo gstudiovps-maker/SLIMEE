@@ -112,6 +112,8 @@ webhooksRouter.post(
 
         const email = session.customer_details?.email || session.customer_email;
 
+        const discordId = String(session.metadata?.discordId || "").trim() || null;
+
         const pi =
 
           typeof session.payment_intent === "string"
@@ -131,6 +133,8 @@ webhooksRouter.post(
             packageId,
 
             customerEmail: email,
+
+            discordId,
 
             stripeSessionId: session.id,
 

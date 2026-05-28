@@ -12,7 +12,7 @@ function normalizeKey(licenseKey) {
 
 
 
-export async function createLicense({ packageId, customerEmail, stripeSessionId, stripePaymentIntent }) {
+export async function createLicense({ packageId, customerEmail, discordId, stripeSessionId, stripePaymentIntent }) {
 
   const existing = await findBySessionAndPackage(stripeSessionId, packageId);
 
@@ -32,13 +32,13 @@ export async function createLicense({ packageId, customerEmail, stripeSessionId,
 
       const result = await query(
 
-        `INSERT INTO licenses (license_key, package_id, customer_email, stripe_session_id, stripe_payment_intent, status)
+        `INSERT INTO licenses (license_key, package_id, customer_email, discord_id, stripe_session_id, stripe_payment_intent, status)
 
-         VALUES ($1, $2, $3, $4, $5, 'active')
+         VALUES ($1, $2, $3, $4, $5, $6, 'active')
 
          RETURNING *`,
 
-        [licenseKey, packageId, customerEmail || null, stripeSessionId, stripePaymentIntent || null]
+        [licenseKey, packageId, customerEmail || null, discordId || null, stripeSessionId, stripePaymentIntent || null]
 
       );
 
