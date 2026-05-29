@@ -18,13 +18,41 @@ async function postCheckout(body) {
 
 
 
+  const auth = window.SlimeeCustomerAuth;
+
+  const token = auth?.getToken?.() || "";
+
+  if (!token) {
+
+    if (auth?.discordLoginUrl) {
+
+      window.location.href = auth.discordLoginUrl();
+
+    }
+
+    return {
+
+      ok: false,
+
+      reason: "login_required",
+
+      message: "Sign in with Discord first — your purchase locks to your account.",
+
+      redirecting: Boolean(auth?.discordLoginUrl)
+
+    };
+
+  }
+
+
+
   try {
 
     const res = await fetch(`${base}/api/checkout`, {
 
       method: "POST",
 
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
 
       body: JSON.stringify(body)
 
