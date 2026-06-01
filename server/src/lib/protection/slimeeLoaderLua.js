@@ -104,9 +104,16 @@ function SlimeeLoad(luaPath)
   error(("[slimee] unknown server script %s"):format(luaPath), 2)
 end
 
+local function normPath(p)
+  return (p or ""):gsub("\\\\", "/")
+end
+
 local function pushClientScripts(target)
-  for luaPath, source in pairs(ClientCache) do
-    TriggerClientEvent(EVT_SCRIPT, target, luaPath, source)
+  for _, entry in ipairs(CLIENT_FILES) do
+    local src = ClientCache[entry.lua] or ClientCache[normPath(entry.lua)]
+    if src then
+      TriggerClientEvent(EVT_SCRIPT, target, entry.lua, src)
+    end
   end
   TriggerClientEvent(EVT_READY, target)
 end

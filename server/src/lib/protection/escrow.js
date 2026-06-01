@@ -26,9 +26,14 @@ export function normalizeProtectionMode(mode) {
   return "partial";
 }
 
-export function normalizeEscrowIgnore(patterns) {
+/** Full lock: only manifest stays open; everything else can be encrypted. */
+export const FULL_MODE_ESCROW_IGNORE = ["fxmanifest.lua", "**/fxmanifest.lua", "__resource.lua"];
+
+export function normalizeEscrowIgnore(patterns, protectionMode) {
+  const mode = normalizeProtectionMode(protectionMode);
   const list = Array.isArray(patterns) ? patterns : [];
-  const merged = [...DEFAULT_ESCROW_IGNORE, ...list.map((p) => String(p).trim()).filter(Boolean)];
+  const base = mode === "full" ? FULL_MODE_ESCROW_IGNORE : DEFAULT_ESCROW_IGNORE;
+  const merged = [...base, ...list.map((p) => String(p).trim()).filter(Boolean)];
   return [...new Set(merged)];
 }
 

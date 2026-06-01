@@ -30,7 +30,10 @@ function normalizePackageBody(raw, fallbackId) {
     detailIntro: String(p.detailIntro || "").trim(),
     detailSections: Array.isArray(p.detailSections) ? p.detailSections : [],
     protectionMode: normalizeProtectionMode(p.protectionMode || p.protection_mode),
-    escrowIgnore: normalizeEscrowIgnore(p.escrowIgnore || p.escrow_ignore)
+    escrowIgnore: normalizeEscrowIgnore(
+      p.escrowIgnore || p.escrow_ignore,
+      p.protectionMode || p.protection_mode
+    )
   };
 }
 
