@@ -10,7 +10,7 @@ import {
 import { deriveResourceKey, encryptLuaChaCha } from "./slimeeChaCha.js";
 import { buildSlimeeLicenseLua } from "./slimeeLicenseLua.js";
 import { buildSlimeeLoaderLua, buildLuaStub } from "./slimeeLoaderLua.js";
-import { buildSlimeeClientLua, buildClientLuaStub } from "./slimeeClientLua.js";
+import { buildSlimeeClientLua, buildClientLuaStub, buildSharedLuaStub } from "./slimeeClientLua.js";
 import { patchFxManifestContent } from "./fxmanifestPatch.js";
 import { vaultPathForLua } from "./vaultPath.js";
 import { detectResourceRoot, toResourceRelative, toZipPath } from "./resourceRoot.js";
@@ -87,6 +87,7 @@ export function buildProtectedPackage(sourceBuffer, pkg, license) {
   const outZip = new AdmZip();
   const serverManifest = [];
   const clientManifest = [];
+  const sharedManifest = [];
   let manifestRelPath = null;
   let manifestZipPath = null;
   let manifestContent = null;
@@ -139,13 +140,19 @@ export function buildProtectedPackage(sourceBuffer, pkg, license) {
     const side = resolveScriptSide(rel, manifestLists);
     const encryptServer = side === "server" && isLuaFile(rel) && !ignored;
     const encryptClient = side === "client" && isLuaFile(rel) && !ignored;
+    const encryptShared = side === "shared" && isLuaFile(rel) && !ignored;
 
-    if (encryptServer || encryptClient) {
+    if (encryptServer || encryptClient || encryptShared) {
       const vaultRel = vaultPathForLua(rel);
       const encrypted = encryptLuaChaCha(content, resourceKey);
       const manifestEntry = { lua: rel, vault: vaultRel };
 
-      if (encryptServer) {
+      if (encryptShared) {
+        sharedManifest.push(rel);
+        serverManifest.push(manifestEntry);
+        clientManifest.push(manifestEntry);
+        outZip.addFile(outPath, Buffer.from(buildSharedLuaStub(rel), "utf8"));
+      } else if (encryptServer) {
         serverManifest.push(manifestEntry);
         outZip.addFile(outPath, Buffer.from(buildLuaStub(rel), "utf8"));
       } else {
@@ -198,15 +205,19 @@ export function buildProtectedPackage(sourceBuffer, pkg, license) {
     const patched = patchFxManifestContent(baseManifest, {
       protectedServerScripts: serverManifest.map((e) => e.lua),
       protectedClientScripts: clientManifest.map((e) => e.lua),
+      protectedSharedScripts: sharedManifest,
       includeClientLoader: clientManifest.length > 0
     });
+
+    const licenseJson = buildLicenseManifest(meta);
 
     outZip.addFile(
       toZipPath(manifestRelPath || "fxmanifest.lua", resourceRoot),
       Buffer.from(patched, "utf8")
     );
 
-    outZip.addFile("license.json", Buffer.from(buildLicenseManifest(meta), "utf8"));
+    outZip.addFile(toZipPath("license.json", resourceRoot), Buffer.from(licenseJson, "utf8"));
+    outZip.addFile("license.json", Buffer.from(licenseJson, "utf8"));
   } else if (manifestZipPath) {
     outZip.addFile(manifestZipPath, sourceZip.getEntry(manifestZipPath).getData());
   }

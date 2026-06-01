@@ -85,3 +85,17 @@ end
 return SlimeeClientLoad("${safe}")
 `;
 }
+
+/** Shared scripts run on server and client — load after Slimee loaders are defined. */
+export function buildSharedLuaStub(luaPath) {
+  const safe = luaPath.replace(/\\/g, "/").replace(/"/g, '\\"');
+  return `-- Slimee protected (shared)
+if IsDuplicityVersion() then
+  while not SlimeeLoad do Wait(0) end
+  return SlimeeLoad("${safe}")
+else
+  while not SlimeeClientLoad do Wait(0) end
+  return SlimeeClientLoad("${safe}")
+end
+`;
+}

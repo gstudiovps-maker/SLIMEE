@@ -4,7 +4,13 @@
 export function patchFxManifestContent(content, options = {}) {
   const protectedServer = options.protectedServerScripts || [];
   const protectedClient = options.protectedClientScripts || [];
+  const protectedShared = options.protectedSharedScripts || [];
   let text = String(content).replace(/^\uFEFF/, "");
+
+  for (const script of protectedShared) {
+    text = removeScriptFromBlock(text, "shared_scripts", script);
+    text = removeScriptFromBlock(text, "shared_script", script);
+  }
 
   text = ensureServerScriptListed(text, "slimee_license.lua", true);
   text = ensureServerScriptListed(text, "slimee_loader.lua", true);
@@ -93,4 +99,11 @@ function moveScriptFirst(text, script, side) {
     return ensureClientScriptListed(cleaned, script, true);
   }
   return ensureServerScriptListed(cleaned, script, true);
+}
+
+function removeScriptFromBlock(text, blockName, script) {
+  const e = escapeRe(script);
+  const lineRe = new RegExp(`\\s*['"]${e}['"]\\s*,?\\n?`, "gi");
+  const blockRe = new RegExp(`${blockName}\\s*\\{([^}]*)\\}`, "gis");
+  return text.replace(blockRe, (m, inner) => `${blockName} {${inner.replace(lineRe, "")}}`);
 }

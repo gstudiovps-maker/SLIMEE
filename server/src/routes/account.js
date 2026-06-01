@@ -28,7 +28,7 @@ accountRouter.get("/licenses", requireCustomer, async (req, res) => {
     );
     const licenses = await Promise.all(
       rows.map(async (row) => {
-        const pkg = await getPackageById(row.package_id);
+        const pkg = await getPackageById(row.package_id, { bypassCache: true });
         return {
           id: row.id,
           licenseKey: row.license_key,
@@ -37,7 +37,9 @@ accountRouter.get("/licenses", requireCustomer, async (req, res) => {
           email: row.customer_email,
           status: row.status,
           boundServerIp: row.bound_server_ip || null,
-          purchasedAt: row.created_at
+          purchasedAt: row.created_at,
+          packageUpdatedAt: pkg?.packageUpdatedAt || null,
+          protectionMode: pkg?.protectionMode || "partial"
         };
       })
     );

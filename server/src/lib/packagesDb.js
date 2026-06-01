@@ -101,7 +101,7 @@ export async function getPackageById(packageId, options = {}) {
 
   if (pool) {
     const res = await pool.query(
-      `SELECT id, body, published FROM packages WHERE id = $1 LIMIT 1`,
+      `SELECT id, body, published, updated_at FROM packages WHERE id = $1 LIMIT 1`,
       [id]
     );
     if (res.rows[0]) {
@@ -113,6 +113,7 @@ export async function getPackageById(packageId, options = {}) {
       const pkg = normalizePackageBody(body, row.id);
       pkg.id = row.id;
       pkg.published = row.published;
+      pkg.packageUpdatedAt = row.updated_at;
       return pkg;
     }
   }
