@@ -1,5 +1,7 @@
+import { SLIMEE_RUNTIME_PATHS } from "./vaultPath.js";
+
 /**
- * Patch fxmanifest: slimee loaders first, then protected server/client .lua stubs.
+ * Patch fxmanifest: slimee loaders in slimee_vault first, then protected stubs.
  */
 export function patchFxManifestContent(content, options = {}) {
   const protectedServer = options.protectedServerScripts || [];
@@ -12,15 +14,20 @@ export function patchFxManifestContent(content, options = {}) {
     text = removeScriptFromBlock(text, "shared_script", script);
   }
 
-  text = ensureServerScriptListed(text, "slimee_license.lua", true);
-  text = ensureServerScriptListed(text, "slimee_loader.lua", true);
+  for (const legacy of ["slimee_license.lua", "slimee_loader.lua", "slimee_client.lua"]) {
+    text = removeScriptFromBlock(text, "server_scripts", legacy);
+    text = removeScriptFromBlock(text, "client_scripts", legacy);
+  }
+
+  text = ensureServerScriptListed(text, SLIMEE_RUNTIME_PATHS.license, true);
+  text = ensureServerScriptListed(text, SLIMEE_RUNTIME_PATHS.loader, true);
 
   for (const script of protectedServer) {
     text = ensureServerScriptListed(text, script, false);
   }
 
   if (options.includeClientLoader) {
-    text = ensureClientScriptListed(text, "slimee_client.lua", true);
+    text = ensureClientScriptListed(text, SLIMEE_RUNTIME_PATHS.client, true);
   }
 
   for (const script of protectedClient) {

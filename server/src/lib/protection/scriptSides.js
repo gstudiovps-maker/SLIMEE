@@ -11,8 +11,12 @@ function norm(relPath) {
 }
 
 export function isSlimeeRuntimeFile(relPath) {
-  const base = norm(relPath).split("/").pop();
-  return SLIMEE_INTERNAL.has(base);
+  const n = norm(relPath);
+  const base = n.split("/").pop();
+  if (!SLIMEE_INTERNAL.has(base)) {
+    return false;
+  }
+  return n.startsWith("slimee_vault/") || !n.includes("/");
 }
 
 export function isServerLuaPath(relPath) {

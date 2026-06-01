@@ -12,7 +12,7 @@ import { buildSlimeeLicenseLua } from "./slimeeLicenseLua.js";
 import { buildSlimeeLoaderLua, buildLuaStub } from "./slimeeLoaderLua.js";
 import { buildSlimeeClientLua, buildClientLuaStub, buildSharedLuaStub } from "./slimeeClientLua.js";
 import { patchFxManifestContent } from "./fxmanifestPatch.js";
-import { vaultPathForLua } from "./vaultPath.js";
+import { vaultPathForLua, SLIMEE_RUNTIME_PATHS } from "./vaultPath.js";
 import { detectResourceRoot, toResourceRelative, toZipPath } from "./resourceRoot.js";
 import { isSlimeeRuntimeFile, isServerLuaPath, isClientLuaPath } from "./scriptSides.js";
 import { parseManifestScripts, scriptSideFromManifest } from "./manifestParse.js";
@@ -34,23 +34,6 @@ function resolveScriptSide(relPath, manifestLists) {
   if (isClientLuaPath(relPath)) return "client";
   if (isServerLuaPath(relPath)) return "server";
   return "other";
-}
-
-function buildLicenseManifest(meta) {
-  return JSON.stringify(
-    {
-      product: "Slimee Protected Delivery",
-      encryption: "chacha20-slme-cfx-family",
-      packageId: meta.packageId,
-      licenseKey: meta.licenseKey,
-      buildId: meta.buildId,
-      generatedAt: meta.generatedAt,
-      protectionMode: meta.protectionMode,
-      packagerVersion: PACKAGER_VERSION
-    },
-    null,
-    2
-  );
 }
 
 /**
@@ -179,7 +162,7 @@ export function buildProtectedPackage(sourceBuffer, pkg, license) {
     }
 
     outZip.addFile(
-      toZipPath("slimee_license.lua", resourceRoot),
+      toZipPath(SLIMEE_RUNTIME_PATHS.license, resourceRoot),
       Buffer.from(buildSlimeeLicenseLua(meta), "utf8")
     );
     const clientManifestOrdered = clientOrder.map((lua) => {
@@ -190,12 +173,12 @@ export function buildProtectedPackage(sourceBuffer, pkg, license) {
     });
 
     outZip.addFile(
-      toZipPath("slimee_loader.lua", resourceRoot),
+      toZipPath(SLIMEE_RUNTIME_PATHS.loader, resourceRoot),
       Buffer.from(buildSlimeeLoaderLua(serverManifest, clientManifestOrdered, buildId), "utf8")
     );
     if (clientManifest.length > 0) {
       outZip.addFile(
-        toZipPath("slimee_client.lua", resourceRoot),
+        toZipPath(SLIMEE_RUNTIME_PATHS.client, resourceRoot),
         Buffer.from(buildSlimeeClientLua(buildId, clientOrder), "utf8")
       );
     }
@@ -209,15 +192,10 @@ export function buildProtectedPackage(sourceBuffer, pkg, license) {
       includeClientLoader: clientManifest.length > 0
     });
 
-    const licenseJson = buildLicenseManifest(meta);
-
     outZip.addFile(
       toZipPath(manifestRelPath || "fxmanifest.lua", resourceRoot),
       Buffer.from(patched, "utf8")
     );
-
-    outZip.addFile(toZipPath("license.json", resourceRoot), Buffer.from(licenseJson, "utf8"));
-    outZip.addFile("license.json", Buffer.from(licenseJson, "utf8"));
   } else if (manifestZipPath) {
     outZip.addFile(manifestZipPath, sourceZip.getEntry(manifestZipPath).getData());
   }

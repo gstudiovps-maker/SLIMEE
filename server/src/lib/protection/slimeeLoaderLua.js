@@ -156,6 +156,6 @@ export function buildLuaStub(luaPath) {
   const safe = luaPath.replace(/\\/g, "/").replace(/"/g, '\\"');
   return `-- Slimee protected (server)
 if SlimeeLoad then return SlimeeLoad("${safe}") end
-error("[slimee] start slimee_license + slimee_loader first", 0)
+error("[slimee] start slimee_vault loaders first", 0)
 `;
 }
