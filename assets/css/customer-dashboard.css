@@ -220,6 +220,12 @@
   margin-bottom: 0.75rem;
 }
 
+.page-customer-account .customer-meta {
+  color: rgba(244, 247, 255, 0.55);
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
 @media (max-width: 1000px) {
   .page-customer-account.is-customer-authed .customer-app {
     grid-template-columns: 1fr;

@@ -53,21 +53,46 @@
     return "customer-status";
   }
 
+  function formatPackageUpdated(iso) {
+    if (!iso) return "—";
+    try {
+      const d = new Date(iso);
+      if (Number.isNaN(d.getTime())) return "—";
+      return d.toLocaleString(undefined, {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit"
+      });
+    } catch {
+      return "—";
+    }
+  }
+
+  function protectionLabel(mode) {
+    const m = String(mode || "partial").toLowerCase();
+    if (m === "full") return "Full lock";
+    if (m === "open") return "Open";
+    return "Partial";
+  }
+
   async function loadLicenses() {
     if (!tbody) return;
-    tbody.innerHTML = `<tr><td colspan="5" class="customer-empty">Loading…</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="6" class="customer-empty">Loading…</td></tr>`;
     try {
       const data = await auth.apiFetch("/licenses");
       const licenses = data.licenses || [];
       if (!licenses.length) {
-        tbody.innerHTML = `<tr><td colspan="5" class="customer-empty">No purchases linked yet. Use the same email on Discord as checkout, then refresh.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="6" class="customer-empty">No purchases linked yet. Use the same email on Discord as checkout, then refresh.</td></tr>`;
         return;
       }
       tbody.innerHTML = licenses
         .map(
           (L) => `<tr>
         <td><code class="customer-key">${escapeHtml(L.licenseKey)}</code></td>
-        <td>${escapeHtml(L.packageName || L.packageId)}</td>
+        <td>${escapeHtml(L.packageName || L.packageId)}<br><small class="customer-meta">${escapeHtml(protectionLabel(L.protectionMode))}</small></td>
+        <td>${escapeHtml(formatPackageUpdated(L.packageUpdatedAt))}</td>
         <td>${escapeHtml(L.email || "—")}</td>
         <td><span class="${statusClass(L.status)}">${escapeHtml(L.status)}</span></td>
         <td><button type="button" class="customer-download-btn" data-license-id="${L.id}">Download</button></td>
@@ -79,7 +104,7 @@
         btn.addEventListener("click", () => downloadLicense(btn.dataset.licenseId, btn));
       });
     } catch (err) {
-      tbody.innerHTML = `<tr><td colspan="5" class="customer-empty">${escapeHtml(err.message)}</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="6" class="customer-empty">${escapeHtml(err.message)}</td></tr>`;
     }
   }
 
@@ -104,7 +129,8 @@
           /* ignore probe errors */
         }
       }
-      window.location.href = url;
+      const bust = `${url}${url.includes("?") ? "&" : "?"}_=${Date.now()}`;
+      window.location.href = bust;
     } catch (err) {
       showPanelMsg(err.message || "Download failed", "error");
     } finally {
