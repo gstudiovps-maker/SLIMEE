@@ -16,6 +16,10 @@ import { vaultPathForLua } from "./vaultPath.js";
 import { detectResourceRoot, toResourceRelative, toZipPath } from "./resourceRoot.js";
 import { isSlimeeRuntimeFile, isServerLuaPath, isClientLuaPath } from "./scriptSides.js";
 import { parseManifestScripts, scriptSideFromManifest } from "./manifestParse.js";
+import { PACKAGER_VERSION } from "./packagerVersion.js";
+import { sanitizeSourceZip } from "./sourceSanitize.js";
+
+export { PACKAGER_VERSION };
 
 function isSlimeeInternal(relPath) {
   const n = relPath.replace(/\\/g, "/").toLowerCase();
@@ -41,7 +45,8 @@ function buildLicenseManifest(meta) {
       licenseKey: meta.licenseKey,
       buildId: meta.buildId,
       generatedAt: meta.generatedAt,
-      protectionMode: meta.protectionMode
+      protectionMode: meta.protectionMode,
+      packagerVersion: PACKAGER_VERSION
     },
     null,
     2
@@ -53,6 +58,8 @@ function buildLicenseManifest(meta) {
  * Encrypted blobs go to slimee_vault/; original paths keep loader stubs.
  */
 export function buildProtectedPackage(sourceBuffer, pkg, license) {
+  const { buffer: cleanSource, stripped: sourceStripped } = sanitizeSourceZip(sourceBuffer);
+
   const protectionMode = normalizeProtectionMode(pkg.protectionMode || pkg.protection_mode);
   const escrowIgnore = normalizeEscrowIgnore(
     pkg.escrowIgnore || pkg.escrow_ignore,
@@ -74,7 +81,7 @@ export function buildProtectedPackage(sourceBuffer, pkg, license) {
   const resourceKey = deriveResourceKey(meta);
   const useProtection = protectionMode !== "open";
 
-  const sourceZip = new AdmZip(sourceBuffer);
+  const sourceZip = new AdmZip(cleanSource);
   const entries = sourceZip.getEntries();
   const resourceRoot = detectResourceRoot(entries);
   const outZip = new AdmZip();
@@ -204,5 +211,9 @@ export function buildProtectedPackage(sourceBuffer, pkg, license) {
     outZip.addFile(manifestZipPath, sourceZip.getEntry(manifestZipPath).getData());
   }
 
-  return outZip.toBuffer();
+  return {
+    buffer: outZip.toBuffer(),
+    packagerVersion: PACKAGER_VERSION,
+    sourceStripped
+  };
 }

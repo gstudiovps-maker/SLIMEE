@@ -3,7 +3,7 @@ import { config } from "../config.js";
 import { findByLicenseKey } from "../lib/licenses.js";
 import { getPackageById } from "../lib/packages.js";
 import { getPackageSourceFile } from "../lib/packageFiles.js";
-import { buildProtectedPackage } from "../lib/protection/packager.js";
+import { buildProtectedPackage, PACKAGER_VERSION } from "../lib/protection/packager.js";
 import { logDownload, logDownloadFile } from "../lib/downloadLog.js";
 import {
   createDownloadToken,
@@ -126,7 +126,7 @@ export async function downloadRequestHandler(req, res) {
       });
     }
 
-    const pkg = await getPackageById(packageId);
+    const pkg = await getPackageById(packageId, { bypassCache: true, publishedOnly: false });
     if (!pkg) {
       return jsonError(res, 404, "package_missing", "Package not found");
     }
@@ -282,7 +282,19 @@ export async function downloadFileHandler(req, res) {
       bound_server_ip: row.bound_server_ip || null
     };
 
-    const protectedZip = buildProtectedPackage(source, pkg, licenseRow);
+    let build;
+    try {
+      build = buildProtectedPackage(source, pkg, licenseRow);
+    } catch (packErr) {
+      if (packErr.code === "source_is_protected_build") {
+        return respondError(409, "source_is_protected_build", packErr.message, {
+          hint: "In admin, re-upload the original unprotected resource ZIP for this package."
+        });
+      }
+      throw packErr;
+    }
+
+    const protectedZip = build.buffer;
     const filename = `${packageId}-${row.license_key.slice(0, 8)}-protected.zip`;
 
     await markDownloadTokenUsed(rawToken);
@@ -297,12 +309,19 @@ export async function downloadFileHandler(req, res) {
       sourceStorageKey,
       buildStorageKey,
       r2GetObjectSuccess,
-      protectedByteSize: protectedZip.length
+      protectedByteSize: protectedZip.length,
+      packagerVersion: build.packagerVersion || PACKAGER_VERSION,
+      sourceStripped: Boolean(build.sourceStripped)
     });
 
     res.setHeader("Content-Type", "application/zip");
     res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
-    res.setHeader("Cache-Control", "no-store");
+    res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
+    res.setHeader("Pragma", "no-cache");
+    res.setHeader("X-Slimee-Packager-Version", build.packagerVersion || PACKAGER_VERSION);
+    if (build.sourceStripped) {
+      res.setHeader("X-Slimee-Source-Sanitized", "1");
+    }
     return res.send(protectedZip);
   } catch (err) {
     logDownloadFile("file_response", 500, { tokenPrefix, error: err.message });

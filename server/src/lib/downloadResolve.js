@@ -85,7 +85,7 @@ export async function resolveDownloadContext(tokenValue) {
     };
   }
 
-  const pkg = await getPackageById(packageId);
+  const pkg = await getPackageById(packageId, { bypassCache: true, publishedOnly: false });
   if (!pkg) {
     return {
       ...base,
